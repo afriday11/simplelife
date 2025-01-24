@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LifeSim MVP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f7f9fc;
+            margin: 0;
+            padding: 15px;
+            font-family: 'Patrick Hand', cursive;
+        }
+
+        #game-container {
+            max-width: 600px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            box-sizing: border-box;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        #stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 480px) {
+            #stats {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        .stat {
+            padding: 15px;
+            background: #fff;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 2px solid #e0e0e0;
+            font-size: 1.2em;
+            transition: transform 0.2s;
+        }
+
+        .stat:hover {
+            transform: translateY(-2px);
+        }
+
+        #story-log {
+            height: 300px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 15px;
+            overflow-y: auto;
+            margin-bottom: 20px;
+            background: #fff;
+            font-size: 1.1em;
+            line-height: 1.4;
+        }
+
+        #story-log div {
+            margin-bottom: 8px;
+            padding: 8px;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        #avatar {
+            font-size: 60px;
+            text-align: center;
+            margin: 20px 0;
+            animation: bounce 1s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        button {
+            width: 100%;
+            padding: 15px 25px;
+            font-size: 1.2em;
+            font-family: 'Patrick Hand', cursive;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            background: #45a049;
+            transform: scale(1.02);
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        /* Custom scrollbar */
+        #story-log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #story-log::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #story-log::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        #story-log::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal h2 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        .modal-stats {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f7f9fc;
+            border-radius: 10px;
+        }
+
+        .new-life-btn {
+            background: #4CAF50;
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Patrick Hand', cursive;
+            font-size: 1.2em;
+            transition: background 0.3s;
+        }
+
+        .new-life-btn:hover {
+            background: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <div class="modal-overlay" id="deathModal">
+        <div class="modal">
+            <h2>💀 Game Over 💀</h2>
+            <div class="modal-stats" id="deathStats">
+                <!-- Stats will be inserted here -->
+            </div>
+            <button class="new-life-btn" onclick="startNewLife()">Start New Life</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div id="avatar">👶</div>
+        <div id="stats">
+            <div class="stat" id="happiness">Happiness: 50</div>
+            <div class="stat" id="health">Health: 50</div>
+            <div class="stat" id="smarts">Smarts: 50</div>
+            <div class="stat" id="looks">Looks: 50</div>
+        </div>
+        <div id="story-log"></div>
+        <button onclick="advanceYear()">+ Year</button>
+    </div>
+
+    <script>
+        // Game State
+        function initializeState() {
+            return {
+                year: 0,
+                age: 0,
+                stats: {
+                    happiness: 80,
+                    health: 80,
+                    smarts: 50,
+                    looks: 60
+                },
+                avatar: '👶',
+                causeOfDeath: null
+            };
+        }
+
+        let state = initializeState();
+
+        // Event System
+        const events = [
+            {
+                weight: 3,
+                message: "You had a pretty normal year.",
+                effect: { happiness: -2, health: 1 },
+                minAge: 0,
+                maxAge: 100
+            },
+            {
+                weight: 1,
+                message: "You discovered a new hobby!",
+                effect: { happiness: 5, smarts: 3 },
+                minAge: 4,
+                maxAge: 90
+            },
+            {
+                weight: 1,
+                message: "You got sick for a while.",
+                effect: { health: -10, happiness: -5 },
+                minAge: 0,
+                maxAge: 100
+            },
+            {
+                weight: 1,
+                message: "You got a new friend!",
+                effect: { happiness: 5, looks: 3 },
+                minAge: 3,
+                maxAge: 80
+            },
+            {
+                weight: 2,
+                message: "You did well on your exams!",
+                effect: { happiness: 8, smarts: 10 },
+                minAge: 6,
+                maxAge: 25
+            },
+            {
+                weight: 1,
+                message: "You fell in love!",
+                effect: { happiness: 15, health: 5, looks: -2 },
+                minAge: 13,
+                maxAge: 80
+            },
+            {
+                weight: 1,
+                message: "You got your dream job!",
+                effect: { happiness: 12, smarts: 5, health: -3 },
+                minAge: 18,
+                maxAge: 65
+            },
+            {
+                weight: 1,
+                message: "You started working out regularly.",
+                effect: { health: 10, looks: 5, happiness: 3 },
+                minAge: 12,
+                maxAge: 80
+            },
+            {
+                weight: 1,
+                message: "You experienced heartbreak.",
+                effect: { happiness: -15, health: -5 },
+                minAge: 13,
+                maxAge: 80
+            },
+            {
+                weight: 2,
+                message: "You learned a new skill!",
+                effect: { smarts: 8, happiness: 5 },
+                minAge: 4,
+                maxAge: 90
+            },
+            {
+                weight: 1,
+                message: "You moved to a new city!",
+                effect: { happiness: -5, smarts: 5, health: 3 },
+                minAge: 18,
+                maxAge: 80
+            },
+            {
+                weight: 1,
+                message: "You won an award!",
+                effect: { happiness: 10, looks: 5 },
+                minAge: 5,
+                maxAge: 90
+            },
+            {
+                weight: 1,
+                message: "You went through a stressful period at work.",
+                effect: { happiness: -8, health: -5, smarts: 3 },
+                minAge: 18,
+                maxAge: 65
+            },
+            {
+                weight: 1,
+                message: "You adopted a pet!",
+                effect: { happiness: 12, health: 3 },
+                minAge: 5,
+                maxAge: 90
+            },
+            // Young Kids (0-5)
+            {
+                weight: 2,
+                message: "You said your first word!",
+                effect: { happiness: 10, smarts: 15 },
+                minAge: 0,
+                maxAge: 2
+            },
+            {
+                weight: 2,
+                message: "You took your first steps!",
+                effect: { health: 15, happiness: 12 },
+                minAge: 0,
+                maxAge: 2
+            },
+            {
+                weight: 1,
+                message: "You started preschool!",
+                effect: { smarts: 15, happiness: 5 },
+                minAge: 3,
+                maxAge: 4
+            },
+            {
+                weight: 2,
+                message: "You made your first best friend at daycare!",
+                effect: { happiness: 10, smarts: 8 },
+                minAge: 2,
+                maxAge: 5
+            },
+            {
+                weight: 1,
+                message: "You learned to ride a tricycle!",
+                effect: { health: 8, happiness: 12 },
+                minAge: 2,
+                maxAge: 4
+            },
+
+            // Elementary School (6-11)
+            {
+                weight: 2,
+                message: "You won the spelling bee!",
+                effect: { smarts: 10, happiness: 8 },
+                minAge: 6,
+                maxAge: 11
+            },
+            {
+                weight: 1,
+                message: "You got selected for the school play!",
+                effect: { happiness: 8, looks: 5, smarts: 3 },
+                minAge: 6,
+                maxAge: 11
+            },
+            {
+                weight: 2,
+                message: "You learned to ride a bicycle!",
+                effect: { health: 8, happiness: 10 },
+                minAge: 6,
+                maxAge: 8
+            },
+            {
+                weight: 1,
+                message: "You joined the school science club!",
+                effect: { smarts: 8, happiness: 5 },
+                minAge: 8,
+                maxAge: 11
+            },
+            {
+                weight: 2,
+                message: "You got perfect attendance this year!",
+                effect: { smarts: 5, health: 5 },
+                minAge: 6,
+                maxAge: 11
+            },
+
+            // Middle School (12-14)
+            {
+                weight: 2,
+                message: "You joined the school band!",
+                effect: { smarts: 7, happiness: 6 },
+                minAge: 12,
+                maxAge: 14
+            },
+            {
+                weight: 1,
+                message: "You experienced your first crush!",
+                effect: { happiness: 10, health: -2 },
+                minAge: 12,
+                maxAge: 14
+            },
+            {
+                weight: 2,
+                message: "You made the honor roll!",
+                effect: { smarts: 12, happiness: 8 },
+                minAge: 12,
+                maxAge: 14
+            },
+            {
+                weight: 1,
+                message: "You went to your first school dance!",
+                effect: { happiness: 8, looks: 5 },
+                minAge: 12,
+                maxAge: 14
+            },
+            {
+                weight: 2,
+                message: "You joined the soccer team!",
+                effect: { health: 10, happiness: 5 },
+                minAge: 12,
+                maxAge: 14
+            },
+
+            // High School (15-18)
+            {
+                weight: 2,
+                message: "You got your driver's license!",
+                effect: { happiness: 15, smarts: 5 },
+                minAge: 16,
+                maxAge: 18
+            },
+            {
+                weight: 2,
+                message: "You were elected class president!",
+                effect: { happiness: 12, smarts: 8, looks: 5 },
+                minAge: 15,
+                maxAge: 18
+            },
+            {
+                weight: 1,
+                message: "You got accepted to your dream college!",
+                effect: { happiness: 20, smarts: 10 },
+                minAge: 17,
+                maxAge: 18
+            },
+            {
+                weight: 2,
+                message: "You went to prom!",
+                effect: { happiness: 10, looks: 8 },
+                minAge: 16,
+                maxAge: 18
+            },
+            {
+                weight: 1,
+                message: "You got a part-time job!",
+                effect: { smarts: 5, happiness: 5, health: -2 },
+                minAge: 15,
+                maxAge: 18
+            },
+
+            // College Events (18-22)
+            {
+                weight: 2,
+                message: "You joined a college fraternity/sorority!",
+                effect: { happiness: 10, smarts: -2, looks: 5 },
+                minAge: 18,
+                maxAge: 22
+            },
+            {
+                weight: 2,
+                message: "You pulled an all-nighter studying for finals!",
+                effect: { smarts: 8, health: -5, happiness: -3 },
+                minAge: 18,
+                maxAge: 22
+            },
+            {
+                weight: 1,
+                message: "You studied abroad for a semester!",
+                effect: { smarts: 15, happiness: 12, health: 3 },
+                minAge: 19,
+                maxAge: 22
+            },
+            {
+                weight: 2,
+                message: "You made the Dean's List!",
+                effect: { smarts: 12, happiness: 10 },
+                minAge: 18,
+                maxAge: 22
+            },
+            {
+                weight: 1,
+                message: "You started a successful side hustle in college!",
+                effect: { smarts: 8, happiness: 5, health: -2 },
+                minAge: 18,
+                maxAge: 22
+            },
+            {
+                weight: 2,
+                message: "You graduated college with honors!",
+                effect: { smarts: 15, happiness: 15, looks: 5 },
+                minAge: 21,
+                maxAge: 23
+            },
+
+            // 20's Events (23-29)
+            {
+                weight: 2,
+                message: "You got promoted at your first real job!",
+                effect: { happiness: 12, smarts: 8, health: -3 },
+                minAge: 23,
+                maxAge: 29
+            },
+            {
+                weight: 2,
+                message: "You started your own business!",
+                effect: { smarts: 15, happiness: 10, health: -5 },
+                minAge: 23,
+                maxAge: 29
+            },
+            {
+                weight: 3,
+                message: "You got married!",
+                effect: { happiness: 20, health: 5, looks: 8 },
+                minAge: 25,
+                maxAge: 29
+            },
+            {
+                weight: 2,
+                message: "You bought your first home!",
+                effect: { happiness: 15, smarts: 5, health: -3 },
+                minAge: 25,
+                maxAge: 29
+            },
+            {
+                weight: 1,
+                message: "You traveled the world for six months!",
+                effect: { happiness: 15, smarts: 10, health: 5 },
+                minAge: 23,
+                maxAge: 29
+            },
+            {
+                weight: 2,
+                message: "You adopted a rescue dog!",
+                effect: { happiness: 12, health: 5 },
+                minAge: 23,
+                maxAge: 29
+            },
+
+            // 30's Events (30-39)
+            {
+                weight: 3,
+                message: "You got a major promotion to management!",
+                effect: { happiness: 15, smarts: 10, health: -8 },
+                minAge: 30,
+                maxAge: 39
+            },
+            {
+                weight: 2,
+                message: "You started training for a marathon!",
+                effect: { health: 12, happiness: 8, looks: 8 },
+                minAge: 30,
+                maxAge: 39
+            },
+            {
+                weight: 2,
+                message: "You went back to school for an advanced degree!",
+                effect: { smarts: 15, happiness: 5, health: -5 },
+                minAge: 30,
+                maxAge: 39
+            },
+            {
+                weight: 2,
+                message: "You had a minor health scare!",
+                effect: { health: -10, happiness: -5 },
+                minAge: 30,
+                maxAge: 39
+            },
+            {
+                weight: 2,
+                message: "You started a successful side business!",
+                effect: { smarts: 12, happiness: 10, health: -8 },
+                minAge: 30,
+                maxAge: 39
+            },
+            {
+                weight: 2,
+                message: "You became a mentor at work!",
+                effect: { smarts: 8, happiness: 10, health: -3 },
+                minAge: 30,
+                maxAge: 39
+            },
+
+            // 40's Events (40-49)
+            {
+                weight: 2,
+                message: "You became a senior executive!",
+                effect: { happiness: 15, smarts: 12, health: -12 },
+                minAge: 40,
+                maxAge: 49
+            },
+            {
+                weight: 3,
+                message: "You developed chronic back pain!",
+                effect: { health: -15, happiness: -8 },
+                minAge: 40,
+                maxAge: 49
+            },
+            {
+                weight: 2,
+                message: "You took up meditation and yoga!",
+                effect: { health: 8, happiness: 8, looks: 5 },
+                minAge: 40,
+                maxAge: 49
+            },
+            {
+                weight: 2,
+                message: "Your doctor advised you to reduce stress!",
+                effect: { health: -8, happiness: -5, smarts: 3 },
+                minAge: 40,
+                maxAge: 49
+            },
+            {
+                weight: 2,
+                message: "You started your own consulting firm!",
+                effect: { smarts: 10, happiness: 8, health: -10 },
+                minAge: 40,
+                maxAge: 49
+            },
+            {
+                weight: 2,
+                message: "You achieved perfect work-life balance!",
+                effect: { happiness: 15, health: 5, smarts: 5 },
+                minAge: 40,
+                maxAge: 49
+            },
+
+            // 50's Events (50-59)
+            {
+                weight: 3,
+                message: "You had a health wake-up call!",
+                effect: { health: -20, happiness: -10, smarts: 5 },
+                minAge: 50,
+                maxAge: 59
+            },
+            {
+                weight: 2,
+                message: "You became a grandparent!",
+                effect: { happiness: 20, health: -5 },
+                minAge: 50,
+                maxAge: 59
+            },
+            {
+                weight: 2,
+                message: "You started taking daily medications!",
+                effect: { health: -12, happiness: -5 },
+                minAge: 50,
+                maxAge: 59
+            },
+            {
+                weight: 2,
+                message: "You discovered a passion for painting!",
+                effect: { happiness: 12, smarts: 8, health: -3 },
+                minAge: 50,
+                maxAge: 59
+            },
+            {
+                weight: 2,
+                message: "You had a successful medical procedure!",
+                effect: { health: -15, happiness: -8, looks: -5 },
+                minAge: 50,
+                maxAge: 59
+            },
+            {
+                weight: 2,
+                message: "You became a community leader!",
+                effect: { happiness: 12, smarts: 10, health: -8 },
+                minAge: 50,
+                maxAge: 59
+            },
+
+            // 60+ Retirement Events
+            {
+                weight: 3,
+                message: "You developed arthritis!",
+                effect: { health: -25, happiness: -10, looks: -5 },
+                minAge: 60,
+                maxAge: 100
+            },
+            {
+                weight: 2,
+                message: "You moved to a retirement community!",
+                effect: { happiness: 10, health: -2, looks: 3 },
+                minAge: 60,
+                maxAge: 100
+            },
+            {
+                weight: 3,
+                message: "You had a fall!",
+                effect: { health: -20, happiness: -10, looks: -5 },
+                minAge: 60,
+                maxAge: 100
+            },
+            {
+                weight: 2,
+                message: "You became a master gardener!",
+                effect: { happiness: 12, health: 5, looks: 5 },
+                minAge: 60,
+                maxAge: 100
+            },
+            {
+                weight: 3,
+                message: "Your doctor prescribed new medications!",
+                effect: { health: -15, happiness: -5 },
+                minAge: 60,
+                maxAge: 100
+            },
+            {
+                weight: 2,
+                message: "You won the senior golf tournament!",
+                effect: { happiness: 15, health: -5, looks: 5 },
+                minAge: 60,
+                maxAge: 100
+            },
+
+            // New Parent Events
+            {
+                weight: 3,
+                message: "You welcomed your first child!",
+                effect: { happiness: 20, health: -5, looks: -3 },
+                minAge: 20,
+                maxAge: 45
+            },
+            {
+                weight: 2,
+                message: "Your baby said their first word!",
+                effect: { happiness: 15, smarts: 5 },
+                minAge: 20,
+                maxAge: 45
+            },
+            {
+                weight: 2,
+                message: "You successfully sleep trained your baby!",
+                effect: { happiness: 12, health: 8 },
+                minAge: 20,
+                maxAge: 45
+            },
+            {
+                weight: 1,
+                message: "You joined a parent support group!",
+                effect: { happiness: 8, smarts: 5, health: 3 },
+                minAge: 20,
+                maxAge: 45
+            },
+            {
+                weight: 2,
+                message: "Your child took their first steps!",
+                effect: { happiness: 15, health: 3 },
+                minAge: 20,
+                maxAge: 45
+            },
+            {
+                weight: 2,
+                message: "You mastered the work-parent balance!",
+                effect: { happiness: 12, smarts: 8, health: 5 },
+                minAge: 20,
+                maxAge: 45
+            },
+            // Add these new negative events to the events array
+            // Childhood Negative Events
+            {
+                weight: 1,
+                message: "You were bullied at school.",
+                effect: { happiness: -15, health: -5, looks: -5 },
+                minAge: 6,
+                maxAge: 18
+            },
+            {
+                weight: 1,
+                message: "Your parents got divorced.",
+                effect: { happiness: -20, health: -8, smarts: -5 },
+                minAge: 5,
+                maxAge: 17
+            },
+            {
+                weight: 1,
+                message: "You broke your arm in a playground accident.",
+                effect: { health: -15, happiness: -10, looks: -3 },
+                minAge: 4,
+                maxAge: 12
+            },
+
+            // Teen/Young Adult Negative Events
+            {
+                weight: 1,
+                message: "You failed your driving test three times.",
+                effect: { happiness: -12, smarts: -8, looks: -3 },
+                minAge: 16,
+                maxAge: 20
+            },
+            {
+                weight: 1,
+                message: "You got rejected from your dream college.",
+                effect: { happiness: -18, smarts: -5 },
+                minAge: 17,
+                maxAge: 19
+            },
+
+            // College/20s Negative Events
+            {
+                weight: 1,
+                message: "You got scammed out of your savings.",
+                effect: { happiness: -10, smarts: -10, health: -3 },
+                minAge: 18,
+                maxAge: 29
+            },
+            {
+                weight: 1,
+                message: "You got fired from your first job.",
+                effect: { happiness: -15, smarts: -5, health: -3 },
+                minAge: 18,
+                maxAge: 25
+            },
+            {
+                weight: 1,
+                message: "Your startup business failed miserably.",
+                effect: { happiness: -12, health: -5, smarts: -5 },
+                minAge: 22,
+                maxAge: 35
+            },
+
+            // Adult Negative Events
+            {
+                weight: 1,
+                message: "You went through a messy divorce.",
+                effect: { happiness: -30, health: -5, looks: 5 },
+                minAge: 25,
+                maxAge: 60
+            },
+            {
+                weight: 1,
+                message: "You lost your house in a natural disaster.",
+                effect: { happiness: -12, health: -10, looks: -5 },
+                minAge: 25,
+                maxAge: 80
+            },
+            {
+                weight: 1,
+                message: "You were passed over for a major promotion.",
+                effect: { happiness: -15, smarts: -2, health: -5 },
+                minAge: 30,
+                maxAge: 60
+            },
+
+            // Middle Age/Senior Negative Events
+            {
+                weight: 1,
+                message: "You were diagnosed with a chronic illness.",
+                effect: { health: -20, happiness: -20, looks: -10 },
+                minAge: 45,
+                maxAge: 80
+            },
+            {
+                weight: 1,
+                message: "You lost all your retirement savings in a market crash.",
+                effect: { happiness: -25, health: -10, smarts: -5 },
+                minAge: 50,
+                maxAge: 75
+            },
+            {
+                weight: 1,
+                message: "You developed a serious addiction.",
+                effect: { health: -35, happiness: -15, looks: -15, smarts: -10 },
+                minAge: 15,
+                maxAge: 80
+            },
+            {
+                weight: 1,
+                message: "You became estranged from your children.",
+                effect: { happiness: -30, health: -5, smarts: -5 },
+                minAge: 40,
+                maxAge: 90
+            }
+        ];
+
+        // Core Game Functions
+        function getRandomEvent() {
+            const eligibleEvents = events.filter(event => 
+                state.age >= event.minAge && state.age <= event.maxAge
+            );
+            
+            const weightedEvents = eligibleEvents.flatMap(event => 
+                Array(event.weight).fill(event)
+            );
+            
+            return weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
+        }
+
+        function updateAvatar() {
+            const avatars = {
+                0: '👶',  // Baby
+                3: '👧',  // Child
+                13: '🧑', // Teen
+                20: '👩', // Adult
+                60: '👵'  // Elder
+            };
+            
+            state.avatar = Object.entries(avatars).reduce((acc, [age, emoji]) => {
+                return state.age >= age ? emoji : acc;
+            }, state.avatar);
+        }
+
+        function applyEventEffects(effects) {
+            Object.entries(effects).forEach(([stat, value]) => {
+                state.stats[stat] = Math.max(0, Math.min(100, state.stats[stat] + value));
+            });
+        }
+
+        // UI Updates
+        function updateUI() {
+            // Update Stats
+            Object.entries(state.stats).forEach(([stat, value]) => {
+                document.getElementById(stat).textContent = 
+                    `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value}`;
+            });
+
+            // Update Avatar
+            document.getElementById('avatar').textContent = state.avatar;
+
+            // Update Year Counter
+            const yearDisplay = document.getElementById('year');
+            if (yearDisplay) yearDisplay.remove();
+            const log = document.getElementById('story-log');
+            log.insertAdjacentHTML('afterbegin', 
+                `<div>Year ${state.year}: Age ${state.age}</div>`);
+        }
+
+        // Main Game Loop
+        function advanceYear() {
+            state.year++;
+            state.age++;
+            
+            // Get and process event
+            const event = getRandomEvent();
+            applyEventEffects(event.effect);
+            
+            // Update avatar based on age
+            updateAvatar();
+            
+            // Add story entry
+            const log = document.getElementById('story-log');
+            log.insertAdjacentHTML('afterbegin', 
+                `<div style="color: ${event.effect.happiness > 0 ? 'green' : 'red'}">
+                    ${event.message}
+                </div>`);
+            
+            // Check for death before updating UI
+            if (!checkDeath()) {
+                updateUI();
+            }
+        }
+
+        // Initial setup
+        updateUI();
+
+        function checkDeath() {
+            if (state.stats.health <= 0) {
+                state.causeOfDeath = "Poor health";
+                showDeathModal();
+                return true;
+            }
+            return false;
+        }
+
+        function showDeathModal() {
+            const modal = document.getElementById('deathModal');
+            const statsDiv = document.getElementById('deathStats');
+            
+            // Calculate lifetime stats
+            const statsHTML = `
+                <p>Age at death: ${state.age} years</p>
+                <p>Final Stats:</p>
+                <p>Happiness: ${state.stats.happiness}</p>
+                <p>Health: ${state.stats.health}</p>
+                <p>Smarts: ${state.stats.smarts}</p>
+                <p>Looks: ${state.stats.looks}</p>
+                <p>Cause of death: ${state.causeOfDeath}</p>
+            `;
+            
+            statsDiv.innerHTML = statsHTML;
+            modal.style.display = 'flex';
+        }
+
+        function startNewLife() {
+            // Reset the game state
+            state = initializeState();
+            
+            // Clear the story log
+            const log = document.getElementById('story-log');
+            log.innerHTML = '';
+            
+            // Hide the death modal
+            document.getElementById('deathModal').style.display = 'none';
+            
+            // Update UI
+            updateUI();
+        }
+    </script>
+</body>
+</html>
