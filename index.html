@@ -8,26 +8,34 @@
         body {
             background-color: #f7f9fc;
             margin: 0;
-            padding: 15px;
+            padding: 0;
             font-family: 'Patrick Hand', cursive;
+            min-height: 100vh;
+            position: fixed;
+            width: 100%;
+            overflow: hidden;
         }
 
         #game-container {
             max-width: 600px;
             width: 100%;
             margin: 0 auto;
-            padding: 20px;
+            padding: 15px;
             box-sizing: border-box;
             background: white;
             border-radius: 15px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
         }
 
         #stats {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-shrink: 0;
         }
 
         @media (min-width: 480px) {
@@ -52,15 +60,16 @@
         }
 
         #story-log {
-            height: 300px;
+            flex: 1;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             padding: 15px;
             overflow-y: auto;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
             background: #fff;
             font-size: 1.1em;
             line-height: 1.4;
+            -webkit-overflow-scrolling: touch;
         }
 
         #story-log div {
@@ -73,8 +82,9 @@
         #avatar {
             font-size: 60px;
             text-align: center;
-            margin: 20px 0;
+            margin: 10px 0;
             animation: bounce 1s infinite;
+            flex-shrink: 0;
         }
 
         @keyframes bounce {
@@ -94,6 +104,9 @@
             cursor: pointer;
             transition: background 0.3s, transform 0.2s;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            flex-shrink: 0;
+            margin-top: auto;
+            margin-bottom: env(safe-area-inset-bottom, 0px);
         }
 
         button:hover {
@@ -173,6 +186,23 @@
 
         .new-life-btn:hover {
             background: #45a049;
+        }
+
+        /* Add viewport-height fix for mobile browsers */
+        @supports (-webkit-touch-callout: none) {
+            #game-container {
+                height: -webkit-fill-available;
+            }
+        }
+
+        /* Adjust for mobile notches and bars */
+        @supports (padding: max(0px)) {
+            #game-container {
+                padding-left: max(15px, env(safe-area-inset-left));
+                padding-right: max(15px, env(safe-area-inset-right));
+                padding-top: max(15px, env(safe-area-inset-top));
+                padding-bottom: max(15px, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>
