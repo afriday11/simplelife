@@ -79,17 +79,37 @@
             background: #f8f9fa;
         }
 
+        #character-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 10px;
+            flex-shrink: 0;
+        }
+
         #avatar {
             font-size: 50px;
             text-align: center;
             margin: 5px 0;
             animation: bounce 1s infinite;
-            flex-shrink: 0;
+            margin: 0;
         }
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
+        #character-info {
+            flex-grow: 1;
+        }
+
+        #character-name {
+            font-size: 1.4em;
+            font-weight: bold;
+            margin: 0;
+            color: #333;
+        }
+
+        #character-age {
+            font-size: 1.2em;
+            color: #666;
+            margin: 0;
         }
 
         button {
@@ -192,7 +212,6 @@
         @supports (-webkit-touch-callout: none) {
             #game-container {
                 height: -webkit-fill-available;
-                max-height: 90vh;
             }
         }
 
@@ -219,7 +238,13 @@
     </div>
 
     <div id="game-container">
-        <div id="avatar">👶</div>
+        <div id="character-header">
+            <div id="avatar">👶</div>
+            <div id="character-info">
+                <div id="character-name"></div>
+                <div id="character-age"></div>
+            </div>
+        </div>
         <div id="stats">
             <div class="stat" id="happiness">Happiness: 50</div>
             <div class="stat" id="health">Health: 50</div>
@@ -231,9 +256,47 @@
     </div>
 
     <script>
+            // Name Lists (add at bottom of file)
+            const firstNames = [
+            "James", "Emma", "Oliver", "Sophia", "William",
+            "Isabella", "Henry", "Charlotte", "Alexander", "Mia",
+            "Benjamin", "Amelia", "Lucas", "Harper", "Theodore",
+            "Evelyn", "Daniel", "Abigail", "Joseph", "Elizabeth",
+            "Samuel", "Sofia", "David", "Victoria", "Andrew"
+        ];
+
+        const europeanLastNames = [
+            { name: "Smith", origin: "european" },
+            { name: "Johnson", origin: "european" },
+            { name: "Williams", origin: "european" },
+            { name: "Brown", origin: "european" },
+            { name: "Jones", origin: "european" },
+            { name: "Garcia", origin: "european" },
+            { name: "Miller", origin: "european" },
+            { name: "Davis", origin: "european" },
+            { name: "Rodriguez", origin: "european" },
+            { name: "Martinez", origin: "european" },
+            { name: "Anderson", origin: "european" },
+            { name: "Taylor", origin: "european" },
+            { name: "Thomas", origin: "european" },
+            { name: "Moore", origin: "european" },
+            { name: "Martin", origin: "european" },
+            { name: "Jackson", origin: "european" },
+            { name: "Thompson", origin: "european" },
+            { name: "White", origin: "european" },
+            { name: "Lopez", origin: "european" },
+            { name: "Lee", origin: "european" },
+            { name: "Harris", origin: "european" },
+            { name: "Clark", origin: "european" },
+            { name: "Lewis", origin: "european" },
+            { name: "Robinson", origin: "european" },
+            { name: "Walker", origin: "european" }
+        ];
+
         // Game State
         function initializeState() {
             return {
+                name: generateRandomName(),
                 year: 0,
                 age: 0,
                 stats: {
@@ -248,7 +311,6 @@
         }
 
         let state = initializeState();
-
         // Event System
         const events = [
             {
@@ -956,21 +1018,13 @@
 
         // UI Updates
         function updateUI() {
-            // Update Stats
-            Object.entries(state.stats).forEach(([stat, value]) => {
-                document.getElementById(stat).textContent = 
-                    `${stat.charAt(0).toUpperCase() + stat.slice(1)}: ${value}`;
-            });
-
-            // Update Avatar
             document.getElementById('avatar').textContent = state.avatar;
-
-            // Update Year Counter
-            const yearDisplay = document.getElementById('year');
-            if (yearDisplay) yearDisplay.remove();
-            const log = document.getElementById('story-log');
-            log.insertAdjacentHTML('afterbegin', 
-                `<div>Year ${state.year}: Age ${state.age}</div>`);
+            document.getElementById('character-name').textContent = state.name;
+            document.getElementById('character-age').textContent = `Age: ${state.age}`;
+            document.getElementById('happiness').textContent = `Happiness: ${state.stats.happiness}`;
+            document.getElementById('health').textContent = `Health: ${state.stats.health}`;
+            document.getElementById('smarts').textContent = `Smarts: ${state.stats.smarts}`;
+            document.getElementById('looks').textContent = `Looks: ${state.stats.looks}`;
         }
 
         // Main Game Loop
@@ -1042,6 +1096,13 @@
             
             // Update UI
             updateUI();
+        }
+
+        // Function to generate random name
+        function generateRandomName() {
+            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+            const lastName = europeanLastNames[Math.floor(Math.random() * europeanLastNames.length)].name;
+            return `${firstName} ${lastName}`;
         }
     </script>
 </body>
