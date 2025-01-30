@@ -224,6 +224,41 @@
                 padding-bottom: max(15px, env(safe-area-inset-bottom));
             }
         }
+
+        #character-stats-table {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 2px solid #e0e0e0;
+        }
+
+        #character-stats-table h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            text-align: center;
+        }
+
+        #character-stats-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #character-stats-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        #character-stats-table td:first-child {
+            font-weight: bold;
+            color: #666;
+            width: 40%;
+        }
+
+        #character-stats-table td:last-child {
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -253,6 +288,61 @@
         </div>
         <div id="story-log"></div>
         <button onclick="advanceYear()">+ Year</button>
+        
+        <!-- New Character Stats Table -->
+        <div id="character-stats-table">
+            <h3>Character Stats</h3>
+            <table>
+                <tr>
+                    <td>Gender:</td>
+                    <td id="char-gender">-</td>
+                </tr>
+                <tr>
+                    <td>Personality:</td>
+                    <td id="char-personality">-</td>
+                </tr>
+                <tr>
+                    <td>Job:</td>
+                    <td id="char-job">-</td>
+                </tr>
+                <tr>
+                    <td>Education:</td>
+                    <td id="char-education">-</td>
+                </tr>
+                <tr>
+                    <td>Childhood Memory:</td>
+                    <td id="char-memory">-</td>
+                </tr>
+                <tr>
+                    <td>Favorite Color:</td>
+                    <td id="char-color">-</td>
+                </tr>
+                <tr>
+                    <td>Greatest Fear:</td>
+                    <td id="char-fear">-</td>
+                </tr>
+                <tr>
+                    <td>Best Friend:</td>
+                    <td id="char-friend">-</td>
+                </tr>
+                <tr>
+                    <td>Favorite Subject:</td>
+                    <td id="char-subject">-</td>
+                </tr>
+                <tr>
+                    <td>Talents:</td>
+                    <td id="char-talents">-</td>
+                </tr>
+                <tr>
+                    <td>Hobbies:</td>
+                    <td id="char-hobbies">-</td>
+                </tr>
+                <tr>
+                    <td>Dreams:</td>
+                    <td id="char-dreams">-</td>
+                </tr>
+            </table>
+        </div>
     </div>
 
     <script>
@@ -295,17 +385,46 @@
 
         // Game State
         function initializeState() {
+            // Helper function to get random personality type
+            const personalities = [
+                "Adventurous", "Creative", "Analytical", "Empathetic",
+                "Ambitious", "Cheerful", "Introverted", "Extroverted"
+            ];
+            
             return {
+                // Basic info (set at birth)
                 name: generateRandomName(),
+                gender: Math.random() < 0.5 ? "Male" : "Female",
+                personality: personalities[Math.floor(Math.random() * personalities.length)],
                 year: 0,
                 age: 0,
-                stats: {
-                    happiness: 80,
-                    health: 80,
-                    smarts: 50,
-                    looks: 60
-                },
+                
+                // Visual
                 avatar: '👶',
+                
+                // Core stats
+                 stats: {
+                    happiness: 50,
+                    health: 50,
+                    smarts: 50,
+                    looks: 50
+                },
+
+                // Life events and characteristics (filled as they grow)
+                job: null,
+                education: null,
+                childhoodMemory: null,
+                favoriteColor: null,
+                greatestFear: null,
+                relationships: [],
+                achievements: [],
+                talents: [],
+                dreams: null,
+                bestFriend: null,
+                favoriteSubject: null,
+                hobbies: [],
+                
+                // Game end
                 causeOfDeath: null
             };
         }
@@ -980,6 +1099,160 @@
                 effect: { happiness: -30, health: -5, smarts: -5 },
                 minAge: 40,
                 maxAge: 90
+            },
+
+            // Childhood Memories (Ages 4-10)
+            {
+                weight: 1,
+                message: "You remember catching fireflies on a warm summer evening.",
+                effect: { happiness: 5 },
+                minAge: 4,
+                maxAge: 10,
+                onTrigger: (state) => { state.childhoodMemory = "Catching fireflies on a warm summer evening" }
+            },
+            {
+                weight: 1,
+                message: "You remember your first day at school, clutching your lunchbox tightly.",
+                effect: { happiness: 3, smarts: 2 },
+                minAge: 4,
+                maxAge: 10,
+                onTrigger: (state) => { state.childhoodMemory = "First day at school with a new lunchbox" }
+            },
+
+            // Favorite Colors (Ages 3-6)
+            {
+                weight: 1,
+                message: "You decided your favorite color is blue like the sky!",
+                effect: { happiness: 2 },
+                minAge: 3,
+                maxAge: 6,
+                onTrigger: (state) => { state.favoriteColor = "Blue" }
+            },
+            {
+                weight: 1,
+                message: "You love the color red like your favorite toy car!",
+                effect: { happiness: 2 },
+                minAge: 3,
+                maxAge: 6,
+                onTrigger: (state) => { state.favoriteColor = "Red" }
+            },
+
+            // Greatest Fears (Ages 6-12)
+            {
+                weight: 1,
+                message: "After watching a scary movie, you developed a fear of the dark.",
+                effect: { happiness: -3 },
+                minAge: 6,
+                maxAge: 12,
+                onTrigger: (state) => { state.greatestFear = "The dark" }
+            },
+            {
+                weight: 1,
+                message: "You realized you're terrified of heights after climbing a tree.",
+                effect: { happiness: -3 },
+                minAge: 6,
+                maxAge: 12,
+                onTrigger: (state) => { state.greatestFear = "Heights" }
+            },
+
+            // Favorite Subjects (Ages 6-18)
+            {
+                weight: 2,
+                message: "You discovered a passion for science in class!",
+                effect: { smarts: 8, happiness: 5 },
+                minAge: 6,
+                maxAge: 18,
+                onTrigger: (state) => { state.favoriteSubject = "Science" }
+            },
+            {
+                weight: 2,
+                message: "You excel in math and love solving problems!",
+                effect: { smarts: 8, happiness: 5 },
+                minAge: 6,
+                maxAge: 18,
+                onTrigger: (state) => { state.favoriteSubject = "Mathematics" }
+            },
+
+            // Best Friends (Ages 4-18)
+            {
+                weight: 2,
+                message: "You met your best friend during recess!",
+                effect: { happiness: 10 },
+                minAge: 4,
+                maxAge: 18,
+                onTrigger: (state) => { state.bestFriend = generateRandomName() }
+            },
+
+            // Hobbies (Ages 5+)
+            {
+                weight: 2,
+                message: "You started collecting stamps as a hobby!",
+                effect: { happiness: 5, smarts: 3 },
+                minAge: 5,
+                maxAge: 90,
+                onTrigger: (state) => { state.hobbies.push("Stamp collecting") }
+            },
+            {
+                weight: 2,
+                message: "You took up gardening and love growing plants!",
+                effect: { happiness: 5, health: 3 },
+                minAge: 5,
+                maxAge: 90,
+                onTrigger: (state) => { state.hobbies.push("Gardening") }
+            },
+
+            // Talents (Ages 6+)
+            {
+                weight: 2,
+                message: "You discovered you have a natural talent for music!",
+                effect: { happiness: 8, smarts: 5 },
+                minAge: 6,
+                maxAge: 20,
+                onTrigger: (state) => { state.talents.push("Musical") }
+            },
+            {
+                weight: 2,
+                message: "You found out you're a gifted artist!",
+                effect: { happiness: 8, looks: 5 },
+                minAge: 6,
+                maxAge: 20,
+                onTrigger: (state) => { state.talents.push("Artistic") }
+            },
+
+            // Dreams (Ages 8+)
+            {
+                weight: 2,
+                message: "You dream of becoming an astronaut one day!",
+                effect: { happiness: 5, smarts: 3 },
+                minAge: 8,
+                maxAge: 18,
+                onTrigger: (state) => { state.dreams = "Becoming an astronaut" }
+            },
+            {
+                weight: 2,
+                message: "You dream of writing a bestselling novel!",
+                effect: { happiness: 5, smarts: 3 },
+                minAge: 8,
+                maxAge: 18,
+                onTrigger: (state) => { state.dreams = "Writing a bestselling novel" }
+            },
+
+            // Education & Jobs (Ages 18+)
+            {
+                weight: 3,
+                message: "You got accepted to medical school!",
+                effect: { happiness: 15, smarts: 10 },
+                minAge: 18,
+                maxAge: 25,
+                onTrigger: (state) => { state.education = "Medical School" }
+            },
+            {
+                weight: 3,
+                message: "You landed your dream job as a software engineer!",
+                effect: { happiness: 15, smarts: 8 },
+                minAge: 22,
+                maxAge: 35,
+                onTrigger: (state) => { state.job = "Software Engineer" }
             }
         ];
 
@@ -1025,6 +1298,37 @@
             document.getElementById('health').textContent = `Health: ${state.stats.health}`;
             document.getElementById('smarts').textContent = `Smarts: ${state.stats.smarts}`;
             document.getElementById('looks').textContent = `Looks: ${state.stats.looks}`;
+            
+            // Update character stats table with visibility logic
+            const statsMapping = {
+                'char-gender': state.gender,
+                'char-personality': state.personality,
+                'char-job': state.job,
+                'char-education': state.education,
+                'char-memory': state.childhoodMemory,
+                'char-color': state.favoriteColor,
+                'char-fear': state.greatestFear,
+                'char-friend': state.bestFriend,
+                'char-subject': state.favoriteSubject,
+                'char-talents': state.talents.length ? state.talents.join(", ") : null,
+                'char-hobbies': state.hobbies.length ? state.hobbies.join(", ") : null,
+                'char-dreams': state.dreams
+            };
+
+            // Update each stat and show/hide its row
+            for (const [elementId, value] of Object.entries(statsMapping)) {
+                const element = document.getElementById(elementId);
+                const row = element.closest('tr'); // Get the parent table row
+                
+                if (value) {
+                    // Show and update rows with values
+                    row.style.display = '';
+                    element.textContent = value;
+                } else {
+                    // Hide empty rows
+                    row.style.display = 'none';
+                }
+            }
         }
 
         // Main Game Loop
@@ -1036,15 +1340,16 @@
             const event = getRandomEvent();
             applyEventEffects(event.effect);
             
-            // Update avatar based on age
+            if (event.onTrigger) {
+                event.onTrigger(state);
+            }
+            
             updateAvatar();
             
             // Add story entry
             const log = document.getElementById('story-log');
             log.insertAdjacentHTML('afterbegin', 
-                `<div style="color: ${event.effect.happiness > 0 ? 'green' : 'red'}">
-                    ${event.message}
-                </div>`);
+                `<div><strong>Age ${state.age}</strong>: ${event.message}</div>`);
             
             // Check for death before updating UI
             if (!checkDeath()) {
