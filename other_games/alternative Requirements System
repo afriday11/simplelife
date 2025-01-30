@@ -1,0 +1,135 @@
+// First, define our requirement types
+const RequirementTypes = {
+    JOB: {
+        validate: (state, params) => {
+            return state.job && params.jobTypes.includes(state.job.type);
+        },
+        description: params => `Must have one of these jobs: ${params.jobTypes.join(', ')}`
+    },
+    STATS: {
+        validate: (state, params) => {
+            return state.stats[params.stat] >= params.value;
+        },
+        description: params => `Must have ${params.stat} of at least ${params.value}`
+    },
+    RELATIONSHIP: {
+        validate: (state, params) => {
+            return state.relationships.some(rel => 
+                params.status.includes(rel.status)
+            );
+        },
+        description: params => `Must have relationship status: ${params.status.join(' or ')}`
+    },
+    EDUCATION: {
+        validate: (state, params) => {
+            return state.education && params.levels.includes(state.education.level);
+        },
+        description: params => `Must have education level: ${params.levels.join(' or ')}`
+    }
+};
+
+// Function to validate all requirements for an event
+function validateEventRequirements(state, requirements) {
+    // If no requirements, event is always valid
+    if (!requirements) return true;
+
+    // Check basic requirements first
+    if (requirements.basic) {
+        const basic = requirements.basic;
+        
+        // Check age range
+        if (basic.minAge && state.age < basic.minAge) return false;
+        if (basic.maxAge && state.age > basic.maxAge) return false;
+        
+        // Check if job is required
+        if (basic.hasJob && !state.job) return false;
+    }
+
+    // Check condition sets (must meet at least one full set if they exist)
+    if (requirements.conditions && requirements.conditions.length > 0) {
+        const validConditionSet = requirements.conditions.some(conditionSet => {
+            // Check each condition in the set
+            return Object.entries(conditionSet).every(([key, condition]) => {
+                const requirementType = RequirementTypes[condition.type];
+                if (!requirementType) {
+                    console.error(`Unknown requirement type: ${condition.type}`);
+                    return false;
+                }
+                return requirementType.validate(state, condition);
+            });
+        });
+
+        if (!validConditionSet) return false;
+    }
+
+    // Run custom validation if it exists
+    if (requirements.customValidation) {
+        return requirements.customValidation(state);
+    }
+
+    return true;
+}
+
+// Modified getRandomEvent to use the new requirement system
+function getRandomEvent() {
+    // Filter eligible events based on requirements
+    const eligibleEvents = events.filter(event => 
+        validateEventRequirements(state, event.requirements)
+    );
+    
+    // Weight the eligible events
+    const weightedEvents = eligibleEvents.flatMap(event => 
+        Array(event.weight).fill(event)
+    );
+    
+    // Return a random event from the weighted list
+    return weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
+}
+
+// Example event using the new system
+const events = [
+    {
+        title: "Career Advancement",
+        weight: 5,
+        requirements: {
+            basic: {
+                minAge: 18,
+                maxAge: 65,
+                hasJob: true
+            },
+            conditions: [
+                {
+                    job: { 
+                        type: 'JOB', 
+                        jobTypes: ['office_worker', 'manager'] 
+                    },
+                    stats: { 
+                        type: 'STATS', 
+                        stat: 'smarts', 
+                        value: 70 
+                    }
+                },
+                {
+                    job: { 
+                        type: 'JOB', 
+                        jobTypes: ['entrepreneur'] 
+                    },
+                    stats: { 
+                        type: 'STATS', 
+                        stat: 'smarts', 
+                        value: 80 
+                    }
+                }
+            ],
+            customValidation: (state) => {
+                // Example: Must not have been promoted in the last 2 years
+                return !state.lastPromotion || 
+                       (state.age - state.lastPromotion) >= 2;
+            }
+        },
+        description: "Your hard work has been noticed...",
+        choices: [
+            // ... choice options ...
+        ]
+    }
+];

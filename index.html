@@ -259,6 +259,82 @@
         #character-stats-table td:last-child {
             color: #333;
         }
+
+        /* Add styles for the choice popup */
+        .choice-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .choice-content {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .choice-button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 8px;
+            background: #4CAF50;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .choice-button:hover {
+            background: #45a049;
+        }
+
+        #relationships-container {
+            margin-top: 15px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border: 2px solid #e0e0e0;
+        }
+
+        #relationships-container h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            text-align: center;
+        }
+
+        .relationship-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .relationship-status {
+            font-style: italic;
+            color: #666;
+        }
+
+        .relationship-level {
+            font-size: 0.9em;
+            color: #888;
+        }
     </style>
 </head>
 <body>
@@ -290,6 +366,12 @@
         <button onclick="advanceYear()">+ Year</button>
         
         <!-- New Character Stats Table -->
+        <div id="relationships-container">
+            <h3>Relationships</h3>
+            <div id="relationships-list">
+                <!-- Relationships will be added here dynamically -->
+            </div>
+        </div>
         <div id="character-stats-table">
             <h3>Character Stats</h3>
             <table>
@@ -346,6 +428,17 @@
                     <td id="char-quirk">-</td>
                 </tr>
             </table>
+        </div>
+    </div>
+
+    <!-- Add this HTML for the choice popup -->
+    <div class="choice-modal" id="choiceModal">
+        <div class="choice-content">
+            <h3 id="choiceTitle">Make a Choice</h3>
+            <p id="choiceDescription">What will you do?</p>
+            <div id="choiceButtons">
+                <!-- Buttons will be added dynamically -->
+            </div>
         </div>
     </div>
 
@@ -409,6 +502,9 @@
                 "Has an uncanny ability to find lost items"
             ];
             
+            // Generate 10 potential relationships
+            const potentialRelationships = Array(10).fill(null).map(() => generatePerson());
+            
             return {
                 // Basic info (set at birth)
                 name: generateRandomName(),
@@ -434,7 +530,7 @@
                 childhoodMemory: null,
                 favoriteColor: null,
                 greatestFear: null,
-                relationships: [],
+                relationships: [], // [{person: Person, status: "friend", level: 50}]
                 achievements: [],
                 talents: [],
                 dreams: null,
@@ -444,842 +540,534 @@
                 
                 // Game end
                 causeOfDeath: null,
-                quirk: quirks[Math.floor(Math.random() * quirks.length)]
+                quirk: quirks[Math.floor(Math.random() * quirks.length)],
+                pets: [],  // Array to store pets: [{type: "Dog", name: "Max"}, ...]
+                potentialRelationships: potentialRelationships,
             };
         }
 
         let state = initializeState();
         // Event System
         const events = [
+            // Hobby Discovery Event
+            {
+                weight: 1,
+                title: "New Hobby",
+                description: "You have some free time. What would you like to try?",
+                minAge: 16,
+                maxAge: 90,
+                choices: [
+                    {
+                        text: "Start collecting rare bugs",
+                        effect: { happiness: 5, smarts: 8, health: -2 },
+                        result: "You've become fascinated with entomology! Your parents are less excited about the bugs in jars.",
+                        onSelect: (state) => { state.hobbies.push("Bug collecting") }
+                    },
+                    {
+                        text: "Learn magic tricks",
+                        effect: { happiness: 8, looks: 5, smarts: 3 },
+                        result: "You're becoming quite the entertainer! Your card tricks are actually impressive.",
+                        onSelect: (state) => { state.hobbies.push("Magic tricks") }
+                    },
+                    {
+                        text: "Start a rock band",
+                        effect: { happiness: 10, health: -3, looks: 5 },
+                        result: "Your garage band isn't great, but you're having the time of your life!",
+                        onSelect: (state) => { state.hobbies.push("Playing music") }
+                    }
+                ]
+            },
+
+            // Sickness Event
+            {
+                weight: 1,
+                title: "Feeling Sick",
+                description: "You're not feeling well. What do you do?",
+                minAge: 16,
+                maxAge: 100,
+                choices: [
+                    {
+                        text: "Ignore it and go to school/work anyway",
+                        effect: { health: -15, happiness: -10, smarts: 2 },
+                        result: "You pushed through but got much sicker. Not your best decision.",
+                        onSelect: (state) => { state.achievements.push("Iron Will") }
+                    },
+                    {
+                        text: "Take medicine and rest",
+                        effect: { health: -5, happiness: -3 },
+                        result: "You recovered after a few days of rest.",
+                        onSelect: null
+                    },
+                    {
+                        text: "Try grandma's secret remedy",
+                        effect: { health: -8, happiness: 5 },
+                        result: "It tasted horrible but somehow made you feel better... eventually.",
+                        onSelect: null
+                    }
+                ]
+            },
+
+            // Exam Cheating Event
+            {
+                weight: 2,
+                title: "Difficult Exam",
+                description: "You're struggling with a really important exam. What do you do?",
+                minAge: 16,
+                maxAge: 25,
+                choices: [
+                    {
+                        text: "Study all night",
+                        effect: { smarts: 15, health: -5, happiness: -3 },
+                        result: "You aced the exam but you're exhausted!",
+                        onSelect: (state) => { state.achievements.push("Academic Excellence") }
+                    },
+                    {
+                        text: "Try to peek at your neighbor's answers",
+                        effect: { smarts: -5, happiness: -10 },
+                        result: "You got caught cheating. This will have consequences...",
+                        onSelect: (state) => { state.achievements.push("Caught Cheating") }
+                    },
+                    {
+                        text: "Write answers on your water bottle",
+                        effect: { happiness: -5 },
+                        result: "You got away with it, but the guilt is eating at you.",
+                        onSelect: null
+                    }
+                ]
+            },
+
+            // Love Event
+            {
+                weight: 1,
+                title: "Crush Alert",
+                requirements: {
+                    minAge: 13,
+                    maxAge: 80,
+                    isSingle: true,
+                    minHappiness: 30
+                },
+                description: "Someone special has caught your eye. How do you approach them?",
+                choices: [
+                    {
+                        text: "Write a romantic poem",
+                        effect: { happiness: 10, smarts: 5, looks: -2 },
+                        result: "They were touched by your creativity! A beautiful relationship begins.",
+                        onSelect: (state) => {
+                            state.relationships.push({
+                                person: generatePerson(),
+                                status: "dating",
+                                level: 50
+                            });
+                        }
+                    },
+                    {
+                        text: "Try to impress them with sports",
+                        effect: { health: 8, happiness: 5, looks: 5 },
+                        result: "You showed off your athletic skills and caught their attention!",
+                        onSelect: (state) => {
+                            state.relationships.push({
+                                person: generatePerson(),
+                                status: "dating",
+                                level: 50
+                            });
+                        }
+                    },
+                    {
+                        text: "Ask their friends about them",
+                        effect: { happiness: -5 },
+                        result: "They found out you were asking about them. How embarrassing!",
+                        onSelect: null
+                    }
+                ]
+            },
+
+            // Dream Job Event
+            {
+                weight: 1,
+                title: "Career Opportunity",
+                description: "Multiple job offers! Which path do you choose?",
+                minAge: 18,
+                maxAge: 65,
+                choices: [
+                    {
+                        text: "Tech startup CEO",
+                        effect: { happiness: 15, smarts: 10, health: -8 },
+                        result: "You're leading a promising startup! The stress is intense but so is the excitement.",
+                        onSelect: (state) => { state.job = "Tech Startup CEO" }
+                    },
+                    {
+                        text: "Professional food critic",
+                        effect: { happiness: 12, health: -5, looks: -3 },
+                        result: "You're living the dream, trying the best restaurants in town!",
+                        onSelect: (state) => { state.job = "Food Critic" }
+                    },
+                    {
+                        text: "International spy",
+                        effect: { happiness: 8, health: -2, smarts: 15 },
+                        result: "Your life is now filled with intrigue and adventure!",
+                        onSelect: (state) => { state.job = "Government Agent" }
+                    }
+                ]
+            },
+
+            // Workout Event
+            {
+                weight: 1,
+                title: "Fitness Journey",
+                description: "You want to get in shape. Which unusual method do you try?",
+                minAge: 12,
+                maxAge: 80,
+                choices: [
+                    {
+                        text: "Underwater basket weaving aerobics",
+                        effect: { health: 12, looks: 8, happiness: 5 },
+                        result: "This weird workout actually worked! You're in great shape!",
+                        onSelect: (state) => { state.hobbies.push("Underwater Aerobics") }
+                    },
+                    {
+                        text: "Extreme dog walking",
+                        effect: { health: 15, happiness: 10, looks: 3 },
+                        result: "Running with dogs through obstacle courses is surprisingly effective!",
+                        onSelect: (state) => { state.hobbies.push("Extreme Dog Walking") }
+                    },
+                    {
+                        text: "Competitive office chair racing",
+                        effect: { health: 5, happiness: 15, looks: -2 },
+                        result: "Not the best workout, but you're having a blast!",
+                        onSelect: (state) => { state.hobbies.push("Chair Racing") }
+                    }
+                ]
+            },
+            //Make a friend
+            {
+                weight: 10,
+                message: "Test event - filler",
+                effect: { happiness: 5, looks: 3 },
+                minAge: 1,
+                maxAge: 80
+            },
+
+            // Meeting New Person Event
             {
                 weight: 3,
-                message: "You had a pretty normal year.",
-                effect: { happiness: -2, health: 1 },
-                minAge: 0,
-                maxAge: 100
-            },
-            {
-                weight: 1,
-                message: "You discovered a new hobby!",
-                effect: { happiness: 5, smarts: 3 },
-                minAge: 4,
-                maxAge: 90
-            },
-            {
-                weight: 1,
-                message: "You got sick for a while.",
-                effect: { health: -10, happiness: -5 },
-                minAge: 0,
-                maxAge: 100
-            },
-            {
-                weight: 1,
-                message: "You got a new friend!",
-                effect: { happiness: 5, looks: 3 },
-                minAge: 3,
-                maxAge: 80
-            },
-            {
-                weight: 2,
-                message: "You did well on your exams!",
-                effect: { happiness: 8, smarts: 10 },
-                minAge: 6,
-                maxAge: 25
-            },
-            {
-                weight: 1,
-                message: "You fell in love!",
-                effect: { happiness: 15, health: 5, looks: -2 },
-                minAge: 13,
-                maxAge: 80
-            },
-            {
-                weight: 1,
-                message: "You got your dream job!",
-                effect: { happiness: 12, smarts: 5, health: -3 },
-                minAge: 18,
-                maxAge: 65
-            },
-            {
-                weight: 1,
-                message: "You started working out regularly.",
-                effect: { health: 10, looks: 5, happiness: 3 },
-                minAge: 12,
-                maxAge: 80
-            },
-            {
-                weight: 1,
-                message: "You experienced heartbreak.",
-                effect: { happiness: -15, health: -5 },
-                minAge: 13,
-                maxAge: 80
-            },
-            {
-                weight: 2,
-                message: "You learned a new skill!",
-                effect: { smarts: 8, happiness: 5 },
-                minAge: 4,
-                maxAge: 90
-            },
-            {
-                weight: 1,
-                message: "You moved to a new city!",
-                effect: { happiness: -5, smarts: 5, health: 3 },
-                minAge: 18,
-                maxAge: 80
-            },
-            {
-                weight: 1,
-                message: "You won an award!",
-                effect: { happiness: 10, looks: 5 },
+                title: "New Connection",
+                requirements: {
+                    minAge: 5,
+                    maxAge: 90,
+                    minHappiness: 20 // Need some basic happiness to be social
+                },
+                description: function(state) {
+                    // First, ensure potentialRelationships exists
+                    if (!state.potentialRelationships) {
+                        state.potentialRelationships = [];
+                    }
+
+                    // Generate a new person if we have less than 3 potential relationships
+                    if (state.potentialRelationships.length < 3) {
+                        const newPerson = generatePerson();
+                        state.potentialRelationships.push(newPerson);
+                    }
+
+                    // Get a random stranger from potential relationships
+                    const availableStrangers = state.potentialRelationships.filter(person => 
+                        !state.relationships.some(rel => rel.person.id === person.id)
+                    );
+
+                    // Select a random stranger
+                    const person = availableStrangers[Math.floor(Math.random() * availableStrangers.length)];
+                    
+                    // Store the selected person in the event state
+                    this.selectedPerson = person;
+                    
+                    return `You meet ${person.name}, a ${person.personality.toLowerCase()} person who loves ${person.interests[0].toLowerCase()}. How do you approach them?`;
+                },
                 minAge: 5,
-                maxAge: 90
+                maxAge: 90,
+                choices: [
+                    {
+                        text: "Be friendly and open",
+                        effect: { happiness: 5 },
+                        result: function(state, event) {
+                            const person = event.selectedPerson;
+                            return `You had an amazing time with ${person.name}! Your friendship has grown stronger.`;
+                        },
+                        onSelect: (state, event) => { 
+                            const person = event.selectedPerson;
+                            addRelationship(state, person, "acquaintance", 20);
+                        }
+                    },
+                    {
+                        text: "Share common interests",
+                        effect: { happiness: 8, smarts: 2 },
+                        result: function(state, event) {
+                            const person = event.selectedPerson;
+                            return `You and ${person.name} really hit it off talking about ${person.interests[0]}!`;
+                        },
+                        onSelect: (state, event) => {
+                            const person = event.selectedPerson;
+                            addRelationship(state, person, "friend", 30);
+                        }
+                    },
+                    {
+                        text: "Keep your distance",
+                        effect: { happiness: -1 },
+                        result: function(state, event) {
+                            const person = event.selectedPerson;
+                            return `You decide to avoid ${person.name}. They seem a bit hurt.`;
+                        },
+                        onSelect: (state, event) => {
+                            const person = event.selectedPerson;
+                            addRelationship(state, person, "stranger", -10);
+                        }
+                    }
+                ]
             },
+
+            // Friendship Development Event
             {
-                weight: 1,
-                message: "You went through a stressful period at work.",
-                effect: { happiness: -8, health: -5, smarts: 3 },
-                minAge: 18,
-                maxAge: 65
+                weight: 5,
+                title: "Deepening Friendship",
+                requirements: {
+                    minAge: 5,
+                    maxAge: 90,
+                    hasFriends: true,
+                    minHappiness: 30 // Need to be somewhat happy to develop friendships
+                },
+                description: function(state) {
+                    // Check if we have any friends first
+                    const friends = state.relationships.filter(rel => 
+                        ["friend", "good_friend","best_friend"].includes(rel.status)
+                    );
+                    
+                    if (friends.length === 0) {
+                        // Apply the happiness penalty
+                        state.stats.happiness = Math.max(0, state.stats.happiness - 10);
+                        updateUI();
+                        
+                        // Immediately fetch another event and show/apply it
+                        // after this function finishes returning.
+                        setTimeout(() => {
+                            const newEvent = getRandomEvent();  // Use your existing function
+                            if (newEvent.choices) {
+                                // If the new event has choices, show them
+                                showChoice(newEvent);
+                            } else {
+                                // Otherwise, just apply the event's effect
+                                applyEventEffects(newEvent.effect);
+                                if (newEvent.onTrigger) {
+                                    newEvent.onTrigger(state);
+                                }
+                                // Log the new event
+                                const log = document.getElementById('story-log');
+                                log.insertAdjacentHTML('afterbegin', 
+                                    `<div><strong>Age ${state.age}</strong>: ${newEvent.message}</div>`
+                                );
+                                updateUI();
+                            }
+                        }, 0);
+                        
+                        // Return a message so you still see something in the UI if needed
+                        return "You find yourself with no real friends. The loneliness weighs heavily on you. Another event is triggered instead…";
+                    }
+                    
+                    // Otherwise, proceed normally
+                    const randomFriend = friends[Math.floor(Math.random() * friends.length)];
+                    this.selectedPerson = randomFriend.person;
+                    return `Your friend ${this.selectedPerson.name} invites you to ${this.selectedPerson.interests[0].toLowerCase()} together. What do you do?`;
+                },
+                minAge: 5,
+                maxAge: 90,
+                choices: [
+                    {
+                        text: "Enthusiastically join them",
+                        effect: { happiness: 10 },
+                        result: function(state, event) {
+                            const person = event.selectedPerson;
+                            return `You had an amazing time with ${person.name}! Your friendship has grown stronger.`;
+                        },
+                        onSelect: (state, event) => {
+                            const person = event.selectedPerson;
+                            if (person) {
+                                upgradeRelationship(state, person, "good_friend");
+                            }
+                        }
+                    },
+                    {
+                        text: "Make an excuse",
+                        effect: { happiness: -3 },
+                        result: function(state, event) {
+                            const person = event.selectedPerson;
+                            return `${person.name} seems disappointed. Your friendship has cooled a bit.`;
+                        },
+                        onSelect: (state, event) => {
+                            const person = event.selectedPerson;
+                            if (person) {
+                                downgradeRelationship(state, person);
+                            }
+                        }
+                    },
+                    {
+                        text: "Suggest a different activity",
+                        effect: { happiness: 5 },
+                        result: function(state, event) {
+                            const person = event.selectedPerson;
+                            return `${person.name} appreciates your honesty and you find a compromise.`;
+                        },
+                        onSelect: (state, event) => {
+                            const person = event.selectedPerson;
+                            if (person) {
+                                addRelationshipPoints(state, person, 5);
+                            }
+                        }
+                    }
+                ]
             },
+
+            // Job-related event
+            {
+                weight: 3,
+                title: "Promotion Opportunity",
+                requirements: {
+                    minAge: 18,
+                    maxAge: 100,
+                    hasJob: true,
+                    minSmarts: 60,
+                    minHappiness: 20
+                },
+                description: "Your boss has noticed your hard work...",
+                choices: [
+                    {
+                        text: "Work extra hours to prove yourself",
+                        effect: { happiness: -5, smarts: 10, health: -5 },
+                        result: "Your dedication paid off! You got the promotion!",
+                        onSelect: (state) => {
+                            state.money += 5000;
+                            if (state.job) {
+                                state.job.level = (state.job.level || 1) + 1;
+                            }
+                        }
+                    },
+                    {
+                        text: "Present your innovative ideas",
+                        effect: { happiness: 5, smarts: 5 },
+                        result: "Your creativity impressed everyone! Promotion granted!",
+                        onSelect: (state) => {
+                            state.money += 5000;
+                            if (state.job) {
+                                state.job.level = (state.job.level || 1) + 1;
+                            }
+                        }
+                    },
+                    {
+                        text: "Decline the opportunity",
+                        effect: { happiness: -3 },
+                        result: "You decided to stay in your current position.",
+                        onSelect: null
+                    }
+                ]
+            },
+
+            // Education event
+            {
+                weight: 7,
+                title: "College Opportunity",
+                requirements: {
+                    minAge: 18,
+                    maxAge: 25,
+                    hasHighSchool: true,
+                    minSmarts: 50,
+                    minMoney: 5000
+                },
+                description: "You have the opportunity to go to college..."
+            },
+
+            // Health event
+            {
+                weight: 2,
+                title: "Marathon Training",
+                requirements: {
+                    minAge: 16,
+                    maxAge: 70,
+                    minHealth: 70,
+                    minHappiness: 50
+                },
+                description: "You feel inspired to train for a marathon..."
+            }
+        ];
+
+        // Add these pet arrays
+        const petTypes = [
+            "Dog",
+            "Cat",
+            "Hamster",
+            "Parrot",
+            "Fish",
+            "Rabbit",
+            "Guinea Pig",
+            "Turtle"
+        ];
+
+        const petNames = [
+            "Luna", "Max", "Bella", "Charlie", 
+            "Lucy", "Milo", "Oliver", "Leo", 
+            "Daisy", "Rocky", "Molly", "Bailey",
+            "Coco", "Buddy", "Ruby", "Shadow",
+            "Lily", "Oscar", "Ziggy", "Pepper"
+        ];
+
+        // Add new pet adoption events
+        const petAdoptionEvents = [
             {
                 weight: 1,
                 message: "You adopted a pet!",
-                effect: { happiness: 12, health: 3 },
-                minAge: 5,
-                maxAge: 90
-            },
-            // Young Kids (0-5)
-            {
-                weight: 2,
-                message: "You said your first word!",
-                effect: { happiness: 10, smarts: 15 },
-                minAge: 0,
-                maxAge: 2
-            },
-            {
-                weight: 2,
-                message: "You took your first steps!",
-                effect: { health: 15, happiness: 12 },
-                minAge: 0,
-                maxAge: 2
-            },
-            {
-                weight: 1,
-                message: "You started preschool!",
-                effect: { smarts: 15, happiness: 5 },
-                minAge: 3,
-                maxAge: 4
-            },
-            {
-                weight: 2,
-                message: "You made your first best friend at daycare!",
-                effect: { happiness: 10, smarts: 8 },
-                minAge: 2,
-                maxAge: 5
-            },
-            {
-                weight: 1,
-                message: "You learned to ride a tricycle!",
-                effect: { health: 8, happiness: 12 },
-                minAge: 2,
-                maxAge: 4
-            },
-
-            // Elementary School (6-11)
-            {
-                weight: 2,
-                message: "You won the spelling bee!",
-                effect: { smarts: 10, happiness: 8 },
-                minAge: 6,
-                maxAge: 11
-            },
-            {
-                weight: 1,
-                message: "You got selected for the school play!",
-                effect: { happiness: 8, looks: 5, smarts: 3 },
-                minAge: 6,
-                maxAge: 11
-            },
-            {
-                weight: 2,
-                message: "You learned to ride a bicycle!",
-                effect: { health: 8, happiness: 10 },
-                minAge: 6,
-                maxAge: 8
-            },
-            {
-                weight: 1,
-                message: "You joined the school science club!",
-                effect: { smarts: 8, happiness: 5 },
-                minAge: 8,
-                maxAge: 11
-            },
-            {
-                weight: 2,
-                message: "You got perfect attendance this year!",
-                effect: { smarts: 5, health: 5 },
-                minAge: 6,
-                maxAge: 11
-            },
-
-            // Middle School (12-14)
-            {
-                weight: 2,
-                message: "You joined the school band!",
-                effect: { smarts: 7, happiness: 6 },
-                minAge: 12,
-                maxAge: 14
-            },
-            {
-                weight: 1,
-                message: "You experienced your first crush!",
-                effect: { happiness: 10, health: -2 },
-                minAge: 12,
-                maxAge: 14
-            },
-            {
-                weight: 2,
-                message: "You made the honor roll!",
-                effect: { smarts: 12, happiness: 8 },
-                minAge: 12,
-                maxAge: 14
-            },
-            {
-                weight: 1,
-                message: "You went to your first school dance!",
-                effect: { happiness: 8, looks: 5 },
-                minAge: 12,
-                maxAge: 14
-            },
-            {
-                weight: 2,
-                message: "You joined the soccer team!",
-                effect: { health: 10, happiness: 5 },
-                minAge: 12,
-                maxAge: 14
-            },
-
-            // High School (15-18)
-            {
-                weight: 2,
-                message: "You got your driver's license!",
-                effect: { happiness: 15, smarts: 5 },
-                minAge: 16,
-                maxAge: 18
-            },
-            {
-                weight: 2,
-                message: "You were elected class president!",
-                effect: { happiness: 12, smarts: 8, looks: 5 },
-                minAge: 15,
-                maxAge: 18
-            },
-            {
-                weight: 1,
-                message: "You got accepted to your dream college!",
-                effect: { happiness: 20, smarts: 10 },
-                minAge: 17,
-                maxAge: 18
-            },
-            {
-                weight: 2,
-                message: "You went to prom!",
-                effect: { happiness: 10, looks: 8 },
-                minAge: 16,
-                maxAge: 18
-            },
-            {
-                weight: 1,
-                message: "You got a part-time job!",
-                effect: { smarts: 5, happiness: 5, health: -2 },
-                minAge: 15,
-                maxAge: 18
-            },
-
-            // College Events (18-22)
-            {
-                weight: 2,
-                message: "You joined a college fraternity/sorority!",
-                effect: { happiness: 10, smarts: -2, looks: 5 },
-                minAge: 18,
-                maxAge: 22
-            },
-            {
-                weight: 2,
-                message: "You pulled an all-nighter studying for finals!",
-                effect: { smarts: 8, health: -5, happiness: -3 },
-                minAge: 18,
-                maxAge: 22
-            },
-            {
-                weight: 1,
-                message: "You studied abroad for a semester!",
-                effect: { smarts: 15, happiness: 12, health: 3 },
-                minAge: 19,
-                maxAge: 22
-            },
-            {
-                weight: 2,
-                message: "You made the Dean's List!",
-                effect: { smarts: 12, happiness: 10 },
-                minAge: 18,
-                maxAge: 22
-            },
-            {
-                weight: 1,
-                message: "You started a successful side hustle in college!",
-                effect: { smarts: 8, happiness: 5, health: -2 },
-                minAge: 18,
-                maxAge: 22
-            },
-            {
-                weight: 2,
-                message: "You graduated college with honors!",
-                effect: { smarts: 15, happiness: 15, looks: 5 },
-                minAge: 21,
-                maxAge: 23
-            },
-
-            // 20's Events (23-29)
-            {
-                weight: 2,
-                message: "You got promoted at your first real job!",
-                effect: { happiness: 12, smarts: 8, health: -3 },
-                minAge: 23,
-                maxAge: 29
-            },
-            {
-                weight: 2,
-                message: "You started your own business!",
-                effect: { smarts: 15, happiness: 10, health: -5 },
-                minAge: 23,
-                maxAge: 29
-            },
-            {
-                weight: 3,
-                message: "You got married!",
-                effect: { happiness: 20, health: 5, looks: 8 },
-                minAge: 25,
-                maxAge: 29
-            },
-            {
-                weight: 2,
-                message: "You bought your first home!",
-                effect: { happiness: 15, smarts: 5, health: -3 },
-                minAge: 25,
-                maxAge: 29
-            },
-            {
-                weight: 1,
-                message: "You traveled the world for six months!",
-                effect: { happiness: 15, smarts: 10, health: 5 },
-                minAge: 23,
-                maxAge: 29
-            },
-            {
-                weight: 2,
-                message: "You adopted a rescue dog!",
-                effect: { happiness: 12, health: 5 },
-                minAge: 23,
-                maxAge: 29
-            },
-
-            // 30's Events (30-39)
-            {
-                weight: 3,
-                message: "You got a major promotion to management!",
-                effect: { happiness: 15, smarts: 10, health: -8 },
-                minAge: 30,
-                maxAge: 39
-            },
-            {
-                weight: 2,
-                message: "You started training for a marathon!",
-                effect: { health: 12, happiness: 8, looks: 8 },
-                minAge: 30,
-                maxAge: 39
-            },
-            {
-                weight: 2,
-                message: "You went back to school for an advanced degree!",
-                effect: { smarts: 15, happiness: 5, health: -5 },
-                minAge: 30,
-                maxAge: 39
-            },
-            {
-                weight: 2,
-                message: "You had a minor health scare!",
-                effect: { health: -10, happiness: -5 },
-                minAge: 30,
-                maxAge: 39
-            },
-            {
-                weight: 2,
-                message: "You started a successful side business!",
-                effect: { smarts: 12, happiness: 10, health: -8 },
-                minAge: 30,
-                maxAge: 39
-            },
-            {
-                weight: 2,
-                message: "You became a mentor at work!",
-                effect: { smarts: 8, happiness: 10, health: -3 },
-                minAge: 30,
-                maxAge: 39
-            },
-
-            // 40's Events (40-49)
-            {
-                weight: 2,
-                message: "You became a senior executive!",
-                effect: { happiness: 15, smarts: 12, health: -12 },
-                minAge: 40,
-                maxAge: 49
-            },
-            {
-                weight: 3,
-                message: "You developed chronic back pain!",
-                effect: { health: -15, happiness: -8 },
-                minAge: 40,
-                maxAge: 49
-            },
-            {
-                weight: 2,
-                message: "You took up meditation and yoga!",
-                effect: { health: 8, happiness: 8, looks: 5 },
-                minAge: 40,
-                maxAge: 49
-            },
-            {
-                weight: 2,
-                message: "Your doctor advised you to reduce stress!",
-                effect: { health: -8, happiness: -5, smarts: 3 },
-                minAge: 40,
-                maxAge: 49
-            },
-            {
-                weight: 2,
-                message: "You started your own consulting firm!",
-                effect: { smarts: 10, happiness: 8, health: -10 },
-                minAge: 40,
-                maxAge: 49
-            },
-            {
-                weight: 2,
-                message: "You achieved perfect work-life balance!",
-                effect: { happiness: 15, health: 5, smarts: 5 },
-                minAge: 40,
-                maxAge: 49
-            },
-
-            // 50's Events (50-59)
-            {
-                weight: 3,
-                message: "You had a health wake-up call!",
-                effect: { health: -20, happiness: -10, smarts: 5 },
-                minAge: 50,
-                maxAge: 59
-            },
-            {
-                weight: 2,
-                message: "You became a grandparent!",
-                effect: { happiness: 20, health: -5 },
-                minAge: 50,
-                maxAge: 59
-            },
-            {
-                weight: 2,
-                message: "You started taking daily medications!",
-                effect: { health: -12, happiness: -5 },
-                minAge: 50,
-                maxAge: 59
-            },
-            {
-                weight: 2,
-                message: "You discovered a passion for painting!",
-                effect: { happiness: 12, smarts: 8, health: -3 },
-                minAge: 50,
-                maxAge: 59
-            },
-            {
-                weight: 2,
-                message: "You had a successful medical procedure!",
-                effect: { health: -15, happiness: -8, looks: -5 },
-                minAge: 50,
-                maxAge: 59
-            },
-            {
-                weight: 2,
-                message: "You became a community leader!",
-                effect: { happiness: 12, smarts: 10, health: -8 },
-                minAge: 50,
-                maxAge: 59
-            },
-
-            // 60+ Retirement Events
-            {
-                weight: 3,
-                message: "You developed arthritis!",
-                effect: { health: -25, happiness: -10, looks: -5 },
-                minAge: 60,
-                maxAge: 100
-            },
-            {
-                weight: 2,
-                message: "You moved to a retirement community!",
-                effect: { happiness: 10, health: -2, looks: 3 },
-                minAge: 60,
-                maxAge: 100
-            },
-            {
-                weight: 3,
-                message: "You had a fall!",
-                effect: { health: -20, happiness: -10, looks: -5 },
-                minAge: 60,
-                maxAge: 100
-            },
-            {
-                weight: 2,
-                message: "You became a master gardener!",
-                effect: { happiness: 12, health: 5, looks: 5 },
-                minAge: 60,
-                maxAge: 100
-            },
-            {
-                weight: 3,
-                message: "Your doctor prescribed new medications!",
-                effect: { health: -15, happiness: -5 },
-                minAge: 60,
-                maxAge: 100
-            },
-            {
-                weight: 2,
-                message: "You won the senior golf tournament!",
-                effect: { happiness: 15, health: -5, looks: 5 },
-                minAge: 60,
-                maxAge: 100
-            },
-
-            // New Parent Events
-            {
-                weight: 3,
-                message: "You welcomed your first child!",
-                effect: { happiness: 20, health: -5, looks: -3 },
-                minAge: 20,
-                maxAge: 45
-            },
-            {
-                weight: 2,
-                message: "Your baby said their first word!",
-                effect: { happiness: 15, smarts: 5 },
-                minAge: 20,
-                maxAge: 45
-            },
-            {
-                weight: 2,
-                message: "You successfully sleep trained your baby!",
-                effect: { happiness: 12, health: 8 },
-                minAge: 20,
-                maxAge: 45
-            },
-            {
-                weight: 1,
-                message: "You joined a parent support group!",
-                effect: { happiness: 8, smarts: 5, health: 3 },
-                minAge: 20,
-                maxAge: 45
-            },
-            {
-                weight: 2,
-                message: "Your child took their first steps!",
-                effect: { happiness: 15, health: 3 },
-                minAge: 20,
-                maxAge: 45
-            },
-            {
-                weight: 2,
-                message: "You mastered the work-parent balance!",
-                effect: { happiness: 12, smarts: 8, health: 5 },
-                minAge: 20,
-                maxAge: 45
-            },
-            // Add these new negative events to the events array
-            // Childhood Negative Events
-            {
-                weight: 1,
-                message: "You were bullied at school.",
-                effect: { happiness: -15, health: -5, looks: -5 },
-                minAge: 6,
-                maxAge: 18
-            },
-            {
-                weight: 1,
-                message: "Your parents got divorced.",
-                effect: { happiness: -20, health: -8, smarts: -5 },
-                minAge: 5,
-                maxAge: 17
-            },
-            {
-                weight: 1,
-                message: "You broke your arm in a playground accident.",
-                effect: { health: -15, happiness: -10, looks: -3 },
-                minAge: 4,
-                maxAge: 12
-            },
-
-            // Teen/Young Adult Negative Events
-            {
-                weight: 1,
-                message: "You failed your driving test three times.",
-                effect: { happiness: -12, smarts: -8, looks: -3 },
-                minAge: 16,
-                maxAge: 20
-            },
-            {
-                weight: 1,
-                message: "You got rejected from your dream college.",
-                effect: { happiness: -18, smarts: -5 },
-                minAge: 17,
-                maxAge: 19
-            },
-
-            // College/20s Negative Events
-            {
-                weight: 1,
-                message: "You got scammed out of your savings.",
-                effect: { happiness: -10, smarts: -10, health: -3 },
-                minAge: 18,
-                maxAge: 29
-            },
-            {
-                weight: 1,
-                message: "You got fired from your first job.",
-                effect: { happiness: -15, smarts: -5, health: -3 },
-                minAge: 18,
-                maxAge: 25
-            },
-            {
-                weight: 1,
-                message: "Your startup business failed miserably.",
-                effect: { happiness: -12, health: -5, smarts: -5 },
-                minAge: 22,
-                maxAge: 35
-            },
-
-            // Adult Negative Events
-            {
-                weight: 1,
-                message: "You went through a messy divorce.",
-                effect: { happiness: -30, health: -5, looks: 5 },
-                minAge: 25,
-                maxAge: 60
-            },
-            {
-                weight: 1,
-                message: "You lost your house in a natural disaster.",
-                effect: { happiness: -12, health: -10, looks: -5 },
-                minAge: 25,
-                maxAge: 80
-            },
-            {
-                weight: 1,
-                message: "You were passed over for a major promotion.",
-                effect: { happiness: -15, smarts: -2, health: -5 },
-                minAge: 30,
-                maxAge: 60
-            },
-
-            // Middle Age/Senior Negative Events
-            {
-                weight: 1,
-                message: "You were diagnosed with a chronic illness.",
-                effect: { health: -20, happiness: -20, looks: -10 },
-                minAge: 45,
-                maxAge: 80
-            },
-            {
-                weight: 1,
-                message: "You lost all your retirement savings in a market crash.",
-                effect: { happiness: -25, health: -10, smarts: -5 },
-                minAge: 50,
-                maxAge: 75
-            },
-            {
-                weight: 1,
-                message: "You developed a serious addiction.",
-                effect: { health: -35, happiness: -15, looks: -15, smarts: -10 },
-                minAge: 15,
-                maxAge: 80
-            },
-            {
-                weight: 1,
-                message: "You became estranged from your children.",
-                effect: { happiness: -30, health: -5, smarts: -5 },
-                minAge: 40,
-                maxAge: 90
-            },
-
-            // Childhood Memories (Ages 4-10)
-            {
-                weight: 1,
-                message: "You remember catching fireflies on a warm summer evening.",
-                effect: { happiness: 5 },
-                minAge: 4,
-                maxAge: 10,
-                onTrigger: (state) => { state.childhoodMemory = "Catching fireflies on a warm summer evening" }
-            },
-            {
-                weight: 1,
-                message: "You remember your first day at school, clutching your lunchbox tightly.",
-                effect: { happiness: 3, smarts: 2 },
-                minAge: 4,
-                maxAge: 10,
-                onTrigger: (state) => { state.childhoodMemory = "First day at school with a new lunchbox" }
-            },
-
-            // Favorite Colors (Ages 3-6)
-            {
-                weight: 1,
-                message: "You decided your favorite color is blue like the sky!",
-                effect: { happiness: 2 },
-                minAge: 3,
-                maxAge: 6,
-                onTrigger: (state) => { state.favoriteColor = "Blue" }
-            },
-            {
-                weight: 1,
-                message: "You love the color red like your favorite toy car!",
-                effect: { happiness: 2 },
-                minAge: 3,
-                maxAge: 6,
-                onTrigger: (state) => { state.favoriteColor = "Red" }
-            },
-
-            // Greatest Fears (Ages 6-12)
-            {
-                weight: 1,
-                message: "After watching a scary movie, you developed a fear of the dark.",
-                effect: { happiness: -3 },
-                minAge: 6,
-                maxAge: 12,
-                onTrigger: (state) => { state.greatestFear = "The dark" }
-            },
-            {
-                weight: 1,
-                message: "You realized you're terrified of heights after climbing a tree.",
-                effect: { happiness: -3 },
-                minAge: 6,
-                maxAge: 12,
-                onTrigger: (state) => { state.greatestFear = "Heights" }
-            },
-
-            // Favorite Subjects (Ages 6-18)
-            {
-                weight: 2,
-                message: "You discovered a passion for science in class!",
-                effect: { smarts: 8, happiness: 5 },
-                minAge: 6,
-                maxAge: 18,
-                onTrigger: (state) => { state.favoriteSubject = "Science" }
-            },
-            {
-                weight: 2,
-                message: "You excel in math and love solving problems!",
-                effect: { smarts: 8, happiness: 5 },
-                minAge: 6,
-                maxAge: 18,
-                onTrigger: (state) => { state.favoriteSubject = "Mathematics" }
-            },
-
-            // Best Friends (Ages 4-18)
-            {
-                weight: 2,
-                message: "You met your best friend during recess!",
                 effect: { happiness: 10 },
-                minAge: 4,
-                maxAge: 18,
-                onTrigger: (state) => { state.bestFriend = generateRandomName() }
-            },
-
-            // Hobbies (Ages 5+)
-            {
-                weight: 2,
-                message: "You started collecting stamps as a hobby!",
-                effect: { happiness: 5, smarts: 3 },
                 minAge: 5,
                 maxAge: 90,
-                onTrigger: (state) => { state.hobbies.push("Stamp collecting") }
-            },
-            {
-                weight: 2,
-                message: "You took up gardening and love growing plants!",
-                effect: { happiness: 5, health: 3 },
-                minAge: 5,
-                maxAge: 90,
-                onTrigger: (state) => { state.hobbies.push("Gardening") }
-            },
-
-            // Talents (Ages 6+)
-            {
-                weight: 2,
-                message: "You discovered you have a natural talent for music!",
-                effect: { happiness: 8, smarts: 5 },
-                minAge: 6,
-                maxAge: 20,
-                onTrigger: (state) => { state.talents.push("Musical") }
-            },
-            {
-                weight: 2,
-                message: "You found out you're a gifted artist!",
-                effect: { happiness: 8, looks: 5 },
-                minAge: 6,
-                maxAge: 20,
-                onTrigger: (state) => { state.talents.push("Artistic") }
-            },
-
-            // Dreams (Ages 8+)
-            {
-                weight: 2,
-                message: "You dream of becoming an astronaut one day!",
-                effect: { happiness: 5, smarts: 3 },
-                minAge: 8,
-                maxAge: 18,
-                onTrigger: (state) => { state.dreams = "Becoming an astronaut" }
-            },
-            {
-                weight: 2,
-                message: "You dream of writing a bestselling novel!",
-                effect: { happiness: 5, smarts: 3 },
-                minAge: 8,
-                maxAge: 18,
-                onTrigger: (state) => { state.dreams = "Writing a bestselling novel" }
-            },
-
-            // Education & Jobs (Ages 18+)
-            {
-                weight: 3,
-                message: "You got accepted to medical school!",
-                effect: { happiness: 15, smarts: 10 },
-                minAge: 18,
-                maxAge: 25,
-                onTrigger: (state) => { state.education = "Medical School" }
-            },
-            {
-                weight: 3,
-                message: "You landed your dream job as a software engineer!",
-                effect: { happiness: 15, smarts: 8 },
-                minAge: 22,
-                maxAge: 35,
-                onTrigger: (state) => { state.job = "Software Engineer" }
+                onTrigger: (state) => {
+                    const petType = petTypes[Math.floor(Math.random() * petTypes.length)];
+                    const petName = petNames[Math.floor(Math.random() * petNames.length)];
+                    state.pets.push({ type: petType, name: petName });
+                }
             }
         ];
 
         // Core Game Functions
         function getRandomEvent() {
-            const eligibleEvents = events.filter(event => 
-                state.age >= event.minAge && state.age <= event.maxAge
-            );
+            const eligibleEvents = events.filter(event => {
+                // Check all requirements
+                if (event.requirements) {
+                    // Age requirements (existing)
+                    if (state.age < event.requirements.minAge || state.age > event.requirements.maxAge) {
+                        return false;
+                    }
+                    
+                    // Job requirements
+                    if (event.requirements.hasJob && !state.job) return false;
+                    if (event.requirements.jobType && state.job !== event.requirements.jobType) return false;
+                    
+                    // Relationship requirements
+                    if (event.requirements.isSingle && state.relationships.some(r => r.status === "married")) return false;
+                    if (event.requirements.isMarried && !state.relationships.some(r => r.status === "married")) return false;
+                    if (event.requirements.hasFriends && !state.relationships.some(r => ["friend", "good_friend", "best_friend"].includes(r.status))) return false;
+                    
+                    // Stat requirements
+                    if (event.requirements.minSmarts && state.stats.smarts < event.requirements.minSmarts) return false;
+                    if (event.requirements.minHealth && state.stats.health < event.requirements.minHealth) return false;
+                    if (event.requirements.minHappiness && state.stats.happiness < event.requirements.minHappiness) return false;
+                    if (event.requirements.minLooks && state.stats.looks < event.requirements.minLooks) return false;
+                    
+                    // Education requirements
+                    if (event.requirements.hasHighSchool && !state.education?.highSchool) return false;
+                    if (event.requirements.hasCollege && !state.education?.college) return false;
+                    
+                    // Asset/Money requirements
+                    if (event.requirements.minMoney && state.money < event.requirements.minMoney) return false;
+                    if (event.requirements.hasHouse && !state.assets?.house) return false;
+                    if (event.requirements.hasCar && !state.assets?.car) return false;
+                }
+                
+                return true;
+            });
             
             const weightedEvents = eligibleEvents.flatMap(event => 
                 Array(event.weight).fill(event)
@@ -1349,6 +1137,26 @@
                     row.style.display = 'none';
                 }
             }
+
+            // Update relationships display
+            const relationshipsList = document.getElementById('relationships-list');
+            relationshipsList.innerHTML = ''; // Clear existing relationships
+
+            if (state.relationships.length === 0) {
+                relationshipsList.innerHTML = '<div class="relationship-item">No relationships yet</div>';
+            } else {
+                state.relationships.forEach(rel => {
+                    const relationshipEmoji = getRelationshipEmoji(rel.status);
+                    const relationshipDiv = document.createElement('div');
+                    relationshipDiv.className = 'relationship-item';
+                    relationshipDiv.innerHTML = `
+                        <span>${relationshipEmoji} ${rel.person.name}</span>
+                        <span class="relationship-status">${formatRelationshipStatus(rel.status)}</span>
+                        <span class="relationship-level">Level: ${rel.level}</span>
+                    `;
+                    relationshipsList.appendChild(relationshipDiv);
+                });
+            }
         }
 
         // Main Game Loop
@@ -1356,22 +1164,29 @@
             state.year++;
             state.age++;
             
-            // Get and process event
             const event = getRandomEvent();
-            applyEventEffects(event.effect);
             
-            if (event.onTrigger) {
-                event.onTrigger(state);
+            // Log the event that was selected
+            console.log("Event fired:", event.title);
+            console.log("Year:", state.year);
+            
+            if (event.choices) {
+                // If event has choices, show the choice modal
+                showChoice(event);
+            } else {
+                // Handle regular events
+                applyEventEffects(event.effect);
+                if (event.onTrigger) {
+                    event.onTrigger(state);
+                }
+                
+                const log = document.getElementById('story-log');
+                log.insertAdjacentHTML('afterbegin', 
+                    `<div><strong>Age ${state.age}</strong>: ${event.message}</div>`);
             }
             
             updateAvatar();
             
-            // Add story entry
-            const log = document.getElementById('story-log');
-            log.insertAdjacentHTML('afterbegin', 
-                `<div><strong>Age ${state.age}</strong>: ${event.message}</div>`);
-            
-            // Check for death before updating UI
             if (!checkDeath()) {
                 updateUI();
             }
@@ -1428,6 +1243,145 @@
             const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
             const lastName = europeanLastNames[Math.floor(Math.random() * europeanLastNames.length)].name;
             return `${firstName} ${lastName}`;
+        }
+
+        // Add choice handling functions
+        function showChoice(event) {
+            const modal = document.getElementById('choiceModal');
+            const title = document.getElementById('choiceTitle');
+            const description = document.getElementById('choiceDescription');
+            const buttonsContainer = document.getElementById('choiceButtons');
+            
+            title.textContent = event.title || 'Make a Choice';
+            description.textContent = typeof event.description === 'function' 
+                ? event.description(state) 
+                : event.description;
+            
+            buttonsContainer.innerHTML = '';
+            
+            event.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'choice-button';
+                button.textContent = choice.text;
+                button.onclick = () => {
+                    handleChoice(choice, event);
+                    modal.style.display = 'none';
+                };
+                buttonsContainer.appendChild(button);
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        function handleChoice(choice, event) {
+            applyEventEffects(choice.effect);
+            
+            if (choice.onSelect) {
+                choice.onSelect(state, event);
+            }
+            
+            const resultText = typeof choice.result === 'function' 
+                ? choice.result(state, event) 
+                : choice.result;
+            
+            const log = document.getElementById('story-log');
+            log.insertAdjacentHTML('afterbegin', 
+                `<div><strong>Age ${state.age}</strong>: ${resultText}</div>`);
+            
+            updateUI();
+        }
+
+        // Person generator
+        function generatePerson() {
+            const personalities = ["Shy", "Outgoing", "Funny", "Serious", "Creative", "Athletic", "Nerdy", "Dramatic"];
+            const interests = ["Video Games", "Sports", "Art", "Music", "Reading", "Cooking", "Travel", "Science"];
+            
+            return {
+                id: Math.random().toString(36).substr(2, 9),
+                name: generateRandomName(),
+                age: Math.floor(Math.random() * 20) + 5, // 5-25 years old, later we'll want to change this so they age with you
+                gender: Math.random() < 0.5 ? "Male" : "Female",
+                personality: personalities[Math.floor(Math.random() * personalities.length)],
+                interests: [interests[Math.floor(Math.random() * interests.length)]],
+                stats: {
+                    happiness: Math.floor(Math.random() * 50) + 50,
+                    smarts: Math.floor(Math.random() * 50) + 50,
+                    looks: Math.floor(Math.random() * 50) + 50
+                },
+                relationshipStatus: "stranger" // stranger, acquaintance, friend, good_friend, best_friend, enemy, dating, married, divorced
+            };
+            console.log(name);
+            console.log(personalities);
+            console.log(interests);
+        }
+        // Helper functions for relationship management
+        function getRandomStranger(state) {
+            return state.potentialRelationships.find(person => 
+                !state.relationships.some(rel => rel.person.id === person.id)
+            );
+        }
+
+        function getRandomFriend(state) {
+            const friends = state.relationships.filter(rel => 
+                ["friend", "good_friend", "best_friend"].includes(rel.status)
+            );
+            return friends[Math.floor(Math.random() * friends.length)]?.person;
+        }
+
+        function addRelationship(state, person, status, level) {
+            state.relationships.push({
+                person: person,
+                status: status,
+                level: level
+            });
+        }
+
+        function upgradeRelationship(state, person, newStatus) {
+            const rel = state.relationships.find(r => r.person.id === person.id);
+            if (rel) {
+                rel.status = newStatus;
+                rel.level += 10;
+            }
+        }
+
+        function downgradeRelationship(state, person) {
+            const rel = state.relationships.find(r => r.person.id === person.id);
+            if (rel) {
+                rel.level -= 10;
+                if (rel.level < 0) {
+                    rel.status = "enemy";
+                }
+            }
+        }
+
+        function addRelationshipPoints(state, person, points) {
+            const rel = state.relationships.find(r => r.person.id === person.id);
+            if (rel) {
+                rel.level += points;
+            }
+        }
+
+        // Helper function to get emoji for relationship status
+        function getRelationshipEmoji(status) {
+            const emojis = {
+                'stranger': '🤔',
+                'acquaintance': '👋',
+                'friend': '😊',
+                'good_friend': '🤗',
+                'best_friend': '💫',
+                'enemy': '😠',
+                'dating': '💕',
+                'married': '💑',
+                'divorced': '💔'
+            };
+            return emojis[status] || '👤';
+        }
+
+        // Helper function to format relationship status
+        function formatRelationshipStatus(status) {
+            return status.split('_')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
         }
     </script>
 </body>
