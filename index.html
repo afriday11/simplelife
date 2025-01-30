@@ -341,6 +341,10 @@
                     <td>Dreams:</td>
                     <td id="char-dreams">-</td>
                 </tr>
+                <tr>
+                    <td>Quirk:</td>
+                    <td id="char-quirk">-</td>
+                </tr>
             </table>
         </div>
     </div>
@@ -391,6 +395,20 @@
                 "Ambitious", "Cheerful", "Introverted", "Extroverted"
             ];
             
+            // Add quirk to initial state
+            const quirks = [
+                "Always talks with their hands",
+                "Can't stand the sound of chewing",
+                "Has an infectious laugh that makes everyone smile",
+                "Sneezes exactly three times in a row, every time",
+                "Absolutely refuses to eat anything green",
+                "Has a slight nervous twitch when excited",
+                "Can fall asleep anywhere, anytime",
+                "Whistles unconsciously when concentrating",
+                "Always needs to organize things by color",
+                "Has an uncanny ability to find lost items"
+            ];
+            
             return {
                 // Basic info (set at birth)
                 name: generateRandomName(),
@@ -425,7 +443,8 @@
                 hobbies: [],
                 
                 // Game end
-                causeOfDeath: null
+                causeOfDeath: null,
+                quirk: quirks[Math.floor(Math.random() * quirks.length)]
             };
         }
 
@@ -1312,7 +1331,8 @@
                 'char-subject': state.favoriteSubject,
                 'char-talents': state.talents.length ? state.talents.join(", ") : null,
                 'char-hobbies': state.hobbies.length ? state.hobbies.join(", ") : null,
-                'char-dreams': state.dreams
+                'char-dreams': state.dreams,
+                'char-quirk': state.quirk
             };
 
             // Update each stat and show/hide its row
