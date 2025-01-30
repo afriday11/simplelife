@@ -549,13 +549,318 @@
         let state = initializeState();
         // Event System
         const events = [
+            //Birth event
+            {
+                weight: 1,
+                title: "Birth",
+                requirements: {
+                    minAge: 0,
+                    maxAge: 1
+                },
+                description: "You are born into this world.",
+                
+                choices: [
+                    {
+                        text: "Cry",
+                        effect: { happiness: 20, smarts: 20, health: 20 },
+                        result: "You are born into this world",
+                }]
+            },
+            // Young Kids (0-5)
+            {
+                weight: 3,
+                title: "First Words",
+                requirements: {
+                    minAge: 2,
+                    maxAge: 3,
+                    minSmarts: 5  // Basic cognitive development
+                },
+                description: "You are about to say your first word! What will it be?",
+                choices: [
+                    {
+                        text: "\"Mama\"",
+                        effect: { happiness: 10, smarts: 5 },
+                        result: "Your mother is overjoyed! This strengthens your bond with her.",
+                        onSelect: (state) => {
+                            state.relationships.push({
+                                person: {
+                                    name: "Mom",
+                                    personality: "Loving",
+                                    interests: ["Family", "Nurturing"]
+                                },
+                                status: "family",
+                                level: 80
+                            });
+                        }
+                    },
+                    {
+                        text: "\"Dada\"",
+                        effect: { happiness: 10, smarts: 5 },
+                        result: "Your father beams with pride! This strengthens your bond with him.",
+                        onSelect: (state) => {
+                            state.relationships.push({
+                                person: {
+                                    name: "Dad",
+                                    personality: "Proud",
+                                    interests: ["Family", "Protection"]
+                                },
+                                status: "family",
+                                level: 80
+                            });
+                        }
+                    },
+                    {
+                        text: "\"No!\"",
+                        effect: { happiness: 5, smarts: 8 },
+                        result: "Your parents are surprised by your assertiveness! You're developing quite the personality.",
+                        onSelect: (state) => {
+                            state.traits = state.traits || [];
+                            state.traits.push("Independent");
+                        }
+                    }
+                ]
+            },
+
+            // Daycare Sharing Event
+            {
+                weight: 4,
+                title: "Sharing is Caring",
+                requirements: {
+                    minAge: 2,
+                    maxAge: 4,
+                    minHappiness: 20
+                },
+                description: "At daycare, another child asks to borrow your favorite toy. What do you do?",
+                choices: [
+                    {
+                        text: "Share the toy",
+                        effect: { happiness: 8, smarts: 5 },
+                        result: "The other child is happy! You've made your first friend at daycare!",
+                        onSelect: (state) => {
+                            const newFriend = generatePerson();
+                            newFriend.age = state.age;
+                            state.relationships.push({
+                                person: newFriend,
+                                status: "friend",
+                                level: 20
+                            });
+                            state.traits = state.traits || [];
+                            state.traits.push("Generous");
+                        }
+                    },
+                    {
+                        text: "Politely say no",
+                        effect: { happiness: -2, smarts: 3 },
+                        result: "You kept your toy but missed a chance to make a friend.",
+                        onSelect: (state) => {
+                            state.traits = state.traits || [];
+                            state.traits.push("Reserved");
+                        }
+                    },
+                    {
+                        text: "Have a tantrum",
+                        effect: { happiness: -5, health: -2, looks: -1 },
+                        result: "The teachers had to calm you down. Your parents were called.",
+                        onSelect: (state) => {
+                            state.traits = state.traits || [];
+                            state.traits.push("Temperamental");
+                        }
+                    }
+                ]
+            },
+
+            // First Play Event
+            {
+                weight: 3,
+                title: "School Play Opportunity",
+                requirements: {
+                    minAge: 4,
+                    maxAge: 6,
+                    minHappiness: 30,
+                    minSmarts: 20
+                },
+                description: "Your preschool is putting on a play! The teacher asks if you want to participate.",
+                choices: [
+                    {
+                        text: "Enthusiastically join",
+                        effect: { happiness: 10, smarts: 5, looks: 3 },
+                        result: "You had so much fun performing! Everyone loved your role as a dancing tree!",
+                        onSelect: (state) => {
+                            state.traits = state.traits || [];
+                            state.traits.push("Outgoing");
+                            // Add some friends from the play
+                            const castMember1 = generatePerson();
+                            const castMember2 = generatePerson();
+                            castMember1.age = state.age;
+                            castMember2.age = state.age;
+                            state.relationships.push(
+                                {
+                                    person: castMember1,
+                                    status: "friend",
+                                    level: 15
+                                },
+                                {
+                                    person: castMember2,
+                                    status: "friend",
+                                    level: 15
+                                }
+                            );
+                        }
+                    },
+                    {
+                        text: "Nervously decline",
+                        effect: { happiness: -3, smarts: 2 },
+                        result: "You watched from the audience. Maybe next time you'll be braver.",
+                        onSelect: (state) => {
+                            state.traits = state.traits || [];
+                            state.traits.push("Shy");
+                        }
+                    },
+                    {
+                        text: "Hide in the bathroom",
+                        effect: { happiness: -5, smarts: -2 },
+                        result: "The teacher found you eventually. Your anxiety about performing is noted.",
+                        onSelect: (state) => {
+                            state.traits = state.traits || [];
+                            state.traits.push("Anxious");
+                            state.stats.happiness = Math.max(0, state.stats.happiness - 5);
+                        }
+                    }
+                ]
+            },
+
+
+            // Elementry School Events (age 6-11)
+
+            // Spelling Bee Event
+            {
+                weight: 2,
+                title: "Spelling Bee",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 11,
+                    minSmarts: 20
+                },
+                description: "You're participating in a spelling bee! Which of these words is spelled correctly?",
+                choices: [
+                    {
+                        text: "Spell 'Antidisestablishmentarianism'",
+                        effect: { smarts: 10, happiness: 5 },
+                        result: "You spelled it correctly! Everyone is impressed by your vocabulary."
+                    },
+                    {
+                        text: "Spell 'Floccinaucinihilipilification'",
+                        effect: { smarts: -5, happiness: -2 },
+                        result: "Oops, that's not quite right. Better luck next time!"
+                    },
+                    {
+                        text: "Spell 'Pneumonoultramicroscopicsilicovolcanoconiosis'",
+                        effect: { smarts: -5, happiness: -2 },
+                        result: "That's a tough one! Don't worry, you'll get it next time."
+                    }
+                ]
+            },
+
+            // Perfect Attendance Event
+            {
+                weight: 1,
+                title: "Perfect Attendance",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 11
+                },
+                description: "You've achieved perfect attendance this year!",
+                effect: { happiness: 10, smarts: 5 },
+                message: "Your dedication to school is commendable. Keep it up!"
+            },
+
+            // Join Travel Soccer Team
+            {
+                weight: 2,
+                title: "Travel Soccer Team",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 11,
+                    minHealth: 30
+                },
+                description: "The travel soccer team is looking for new players. Do you want to join?",
+                choices: [
+                    {
+                        text: "Join the team",
+                        effect: { health: 10, happiness: 10 },
+                        result: "You joined the team and made new friends while staying active!",
+                        onSelect: (state) => {
+                            const newFriend = generatePerson();
+                            state.relationships.push({
+                                person: newFriend,
+                                status: "friend",
+                                level: 20
+                            });
+                        }
+                    },
+                    {
+                        text: "Focus on studies instead",
+                        effect: { smarts: 5 },
+                        result: "You decided to focus on your studies. Your grades improved!"
+                    }
+                ]
+            },
+
+            // Learn to Ride a Bicycle
+            {
+                weight: 1,
+                title: "Learn to Ride a Bicycle",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 11
+                },
+                description: "You learned to ride a bicycle!",
+                effect: { happiness: 15, health: 5 },
+                message: "Riding a bike is so much fun! You feel a sense of freedom."
+            },
+
+            // School Science Club
+            {
+                weight: 2,
+                title: "School Science Club",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 11,
+                    minSmarts: 20
+                },
+                description: "The science club is looking for new members. Do you want to join?",
+                choices: [
+                    {
+                        text: "Join the science club",
+                        effect: { smarts: 10, happiness: 5 },
+                        result: "You joined the science club and made a new friend!",
+                        onSelect: (state) => {
+                            const newFriend = generatePerson();
+                            state.relationships.push({
+                                person: newFriend,
+                                status: "friend",
+                                level: 20
+                            });
+                        }
+                    },
+                    {
+                        text: "Not interested",
+                        effect: { happiness: -2 },
+                        result: "You decided not to join the science club. Maybe next time!"
+                    }
+                ]
+            },
+
             // Hobby Discovery Event
             {
                 weight: 1,
                 title: "New Hobby",
+                requirements: {
+                    minAge: 12,
+                    maxAge: 90,
+                    minHappiness: 30
+                },
                 description: "You have some free time. What would you like to try?",
-                minAge: 16,
-                maxAge: 90,
                 choices: [
                     {
                         text: "Start collecting rare bugs",
@@ -582,9 +887,12 @@
             {
                 weight: 1,
                 title: "Feeling Sick",
+                requirements: {
+                    minAge: 16,
+                    maxAge: 100,
+                    minHealth: 40
+                },
                 description: "You're not feeling well. What do you do?",
-                minAge: 16,
-                maxAge: 100,
                 choices: [
                     {
                         text: "Ignore it and go to school/work anyway",
@@ -611,9 +919,13 @@
             {
                 weight: 2,
                 title: "Difficult Exam",
+                requirements: {
+                    minAge: 16,
+                    maxAge: 25,
+                    minSmarts: 50,
+                    minHappiness: 30
+                },
                 description: "You're struggling with a really important exam. What do you do?",
-                minAge: 16,
-                maxAge: 25,
                 choices: [
                     {
                         text: "Study all night",
@@ -686,8 +998,11 @@
                 weight: 1,
                 title: "Career Opportunity",
                 description: "Multiple job offers! Which path do you choose?",
-                minAge: 18,
-                maxAge: 65,
+                requirements: {
+                    minAge: 18,
+                    maxAge: 65,
+                    minHappiness: 30
+                },
                 choices: [
                     {
                         text: "Tech startup CEO",
@@ -714,39 +1029,43 @@
             {
                 weight: 1,
                 title: "Fitness Journey",
+                requirements: {
+                    minAge: 12,
+                    maxAge: 80,
+                    minHealth: 20,
+                    minHappiness: 30
+                },
                 description: "You want to get in shape. Which unusual method do you try?",
-                minAge: 12,
-                maxAge: 80,
                 choices: [
                     {
                         text: "Underwater basket weaving aerobics",
                         effect: { health: 12, looks: 8, happiness: 5 },
                         result: "This weird workout actually worked! You're in great shape!",
-                        onSelect: (state) => { state.hobbies.push("Underwater Aerobics") }
+                        onSelect: (state) => {
+                            state.hobbies = state.hobbies || [];
+                            state.hobbies.push("Underwater Aerobics");
+                        }
                     },
                     {
                         text: "Extreme dog walking",
                         effect: { health: 15, happiness: 10, looks: 3 },
                         result: "Running with dogs through obstacle courses is surprisingly effective!",
-                        onSelect: (state) => { state.hobbies.push("Extreme Dog Walking") }
+                        onSelect: (state) => {
+                            state.hobbies = state.hobbies || [];
+                            state.hobbies.push("Extreme Dog Walking");
+                        }
                     },
                     {
                         text: "Competitive office chair racing",
                         effect: { health: 5, happiness: 15, looks: -2 },
                         result: "Not the best workout, but you're having a blast!",
-                        onSelect: (state) => { state.hobbies.push("Chair Racing") }
+                        onSelect: (state) => {
+                            state.hobbies = state.hobbies || [];
+                            state.hobbies.push("Chair Racing");
+                        }
                     }
                 ]
             },
-            //Make a friend
-            {
-                weight: 10,
-                message: "Test event - filler",
-                effect: { happiness: 5, looks: 3 },
-                minAge: 1,
-                maxAge: 80
-            },
-
             // Meeting New Person Event
             {
                 weight: 3,
@@ -781,8 +1100,6 @@
                     
                     return `You meet ${person.name}, a ${person.personality.toLowerCase()} person who loves ${person.interests[0].toLowerCase()}. How do you approach them?`;
                 },
-                minAge: 5,
-                maxAge: 90,
                 choices: [
                     {
                         text: "Be friendly and open",
@@ -975,8 +1292,8 @@
                     minAge: 18,
                     maxAge: 25,
                     hasHighSchool: true,
-                    minSmarts: 50,
-                    minMoney: 5000
+                    minSmarts: 50
+                    //minMoney: 5000
                 },
                 description: "You have the opportunity to go to college..."
             },
@@ -993,50 +1310,16 @@
                 },
                 description: "You feel inspired to train for a marathon..."
             }
-        ];
+    ]// Close the events array
 
-        // Add these pet arrays
-        const petTypes = [
-            "Dog",
-            "Cat",
-            "Hamster",
-            "Parrot",
-            "Fish",
-            "Rabbit",
-            "Guinea Pig",
-            "Turtle"
-        ];
+        // Initialize a set to track fired events
+        let firedEvents = new Set();
 
-        const petNames = [
-            "Luna", "Max", "Bella", "Charlie", 
-            "Lucy", "Milo", "Oliver", "Leo", 
-            "Daisy", "Rocky", "Molly", "Bailey",
-            "Coco", "Buddy", "Ruby", "Shadow",
-            "Lily", "Oscar", "Ziggy", "Pepper"
-        ];
-
-        // Add new pet adoption events
-        const petAdoptionEvents = [
-            {
-                weight: 1,
-                message: "You adopted a pet!",
-                effect: { happiness: 10 },
-                minAge: 5,
-                maxAge: 90,
-                onTrigger: (state) => {
-                    const petType = petTypes[Math.floor(Math.random() * petTypes.length)];
-                    const petName = petNames[Math.floor(Math.random() * petNames.length)];
-                    state.pets.push({ type: petType, name: petName });
-                }
-            }
-        ];
-
-        // Core Game Functions
         function getRandomEvent() {
             const eligibleEvents = events.filter(event => {
                 // Check all requirements
                 if (event.requirements) {
-                    // Age requirements (existing)
+                    // Age requirements
                     if (state.age < event.requirements.minAge || state.age > event.requirements.maxAge) {
                         return false;
                     }
@@ -1066,6 +1349,11 @@
                     if (event.requirements.hasCar && !state.assets?.car) return false;
                 }
                 
+                // Check if the event is repeatable or has not been fired yet
+                if (!event.repeatable && firedEvents.has(event.title)) {
+                    return false;
+                }
+                
                 return true;
             });
             
@@ -1073,18 +1361,35 @@
                 Array(event.weight).fill(event)
             );
             
-            return weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
+            const selectedEvent = weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
+            
+            // Mark the event as fired
+            if (selectedEvent) {
+                firedEvents.add(selectedEvent.title);
+            }
+            
+            return selectedEvent;
         }
 
         function updateAvatar() {
-            const avatars = {
+            const maleAvatars = {
+                0: '👶',  // Baby
+                3: '👦',  // Child
+                13: '👨', // Teen
+                20: '👨', // Adult
+                60: '👴'  // Elder
+            };
+
+            const femaleAvatars = {
                 0: '👶',  // Baby
                 3: '👧',  // Child
-                13: '🧑', // Teen
+                13: '👩', // Teen
                 20: '👩', // Adult
                 60: '👵'  // Elder
             };
-            
+
+            const avatars = state.gender === "Male" ? maleAvatars : femaleAvatars;
+
             state.avatar = Object.entries(avatars).reduce((acc, [age, emoji]) => {
                 return state.age >= age ? emoji : acc;
             }, state.avatar);
@@ -1166,9 +1471,15 @@
             
             const event = getRandomEvent();
             
+            if (!event) {
+                console.warn("No eligible event found for the current state.");
+                // Optionally, you can add a default event or skip the year
+                return;
+            }
+            
             // Log the event that was selected
             console.log("Event fired:", event.title);
-            console.log("Year:", state.year);
+            console.log("Year:", state.year, "Health:", state.stats.health, "Happiness:", state.stats.happiness, "Smarts:", state.stats.smarts, "Looks:", state.stats.looks);
             
             if (event.choices) {
                 // If event has choices, show the choice modal
@@ -1383,6 +1694,40 @@
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
         }
+
+        // Add this function to your script
+        function triggerEventByTitle(title) {
+            const event = events.find(e => e.title === title);
+            
+            if (!event) {
+                console.warn(`Event with title "${title}" not found.`);
+                return;
+            }
+            
+            console.log(`Triggering event: ${event.title}`);
+            
+            if (event.choices) {
+                // Show the choice modal for events with choices
+                showChoice(event);
+            } else {
+                // Apply the event's effects directly
+                applyEventEffects(event.effect);
+                if (event.onTrigger) {
+                    event.onTrigger(state);
+                }
+                
+                // Log the event in the story log
+                const log = document.getElementById('story-log');
+                log.insertAdjacentHTML('afterbegin', 
+                    `<div><strong>Age ${state.age}</strong>: ${event.message}</div>`);
+            }
+            
+            updateAvatar();
+            updateUI();
+        }
+
+        // Example usage in the console:
+        // triggerEventByTitle("Birth");
     </script>
 </body>
 </html>
