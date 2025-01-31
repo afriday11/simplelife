@@ -104,7 +104,7 @@ const dialogConfig = {
       text-align: center;
       flex-shrink: 0;
     `;
-    header.textContent = "Conversation";
+    header.textContent = "Rogue-Life";
   
     // Messages container with smooth scroll
     const dialogMessages = document.createElement("div");
