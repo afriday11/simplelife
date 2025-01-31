@@ -1680,6 +1680,10 @@
             // Hide the death modal
             document.getElementById('deathModal').style.display = 'none';
             
+            // Reset the fired events set
+            // We can remove this if we decide to keep the events from firing multiple times
+            firedEvents = new Set();
+            
             // Update UI
             updateUI();
         }
