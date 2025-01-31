@@ -439,6 +439,7 @@
         </div>
     </div>
 
+    <script src="dialogSystem.js"></script>
     <script>
             // Name Lists (add at bottom of file)
             const firstNames = [
@@ -585,6 +586,37 @@
                     }
                 ]
             },
+            //Tragic accident death event
+            {
+                weight: 100,
+                title: "Death",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 25
+                },
+                description: "You're driving late at night after a party, feeling invincible. Suddenly, a deer jumps onto the road!",
+                choices: [
+                    {
+                        text: "Swerve to avoid it",
+                        effect: { health: -100 },
+                        result: "You swerve sharply to avoid the deer. Your car loses control and rolls several times. The world goes dark...",
+                        onSelect: (state) => {
+                            state.causeOfDeath = "Car accident - lost control while swerving";
+                            showDeathModal();
+                        }
+                    },
+                    {
+                        text: "Hit the brakes",
+                        effect: { health: -100 },
+                        result: "You slam on the brakes, but it's too late. The car hits the deer then flips over, crashing into a tree. The world goes dark...",
+                        onSelect: (state) => {
+                            state.causeOfDeath = "Car accident - collision with tree";
+                            showDeathModal();
+                        }
+                    }
+                ]
+            },
+
             // Young Kids (0-5)
             {
                 weight: 3,
@@ -1595,6 +1627,23 @@
             return false;
         }
 
+        function showDeathSequenceAndThenStartNewLife() {
+            // Retrieve the current death count from localStorage
+            let currentDeathCount = parseInt(localStorage.getItem("deathCount") || "0");
+            currentDeathCount++;
+            localStorage.setItem("deathCount", currentDeathCount.toString());
+
+            const dialogKey = `death${currentDeathCount}`;
+
+            // Show the dialog for "deathN"
+            showDialog(dialogKey, {
+                onDone: () => {
+                    // At the end, actually start a new life
+                    startNewLife();
+                }
+            });
+        }
+
         function showDeathModal() {
             const modal = document.getElementById('deathModal');
             const statsDiv = document.getElementById('deathStats');
@@ -1612,6 +1661,12 @@
             
             statsDiv.innerHTML = statsHTML;
             modal.style.display = 'flex';
+
+            // Instead of immediately "startNewLife," chain your new function:
+            // Optionally, hide the normal "Start New Life" button or
+            // replace its onclick with showDeathSequenceAndThenStartNewLife()
+            const newLifeButton = modal.querySelector(".new-life-btn");
+            newLifeButton.onclick = showDeathSequenceAndThenStartNewLife;
         }
 
         function startNewLife() {
@@ -1778,7 +1833,26 @@
                 .join(' ');
         }
 
+        // Call this once on page load to initialize the dialog UI container
+        initDialogSystem();
 
+        // Example: Modify your showDeathModal or wherever you do "Game Over":
+        function showDeathSequenceAndThenStartNewLife() {
+            // Retrieve the current death count from localStorage
+            let currentDeathCount = parseInt(localStorage.getItem("deathCount") || "0");
+            currentDeathCount++;
+            localStorage.setItem("deathCount", currentDeathCount.toString());
+
+            const dialogKey = `death${currentDeathCount}`;
+
+            // Show the dialog for "deathN"
+            showDialog(dialogKey, {
+                onDone: () => {
+                    // At the end, actually start a new life
+                    startNewLife();
+                }
+            });
+        }
 
         // CHEATS FOR TESTING
 
@@ -1828,6 +1902,10 @@
             updateAvatar();
             updateUI();
         }
+
+        // Dialog System
+        
+
 
     </script>
 </body>
