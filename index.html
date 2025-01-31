@@ -112,6 +112,12 @@
             margin: 0;
         }
 
+        #character-money {
+            font-size: 1.2em;
+            color: #666;
+            margin: 0;
+        }
+
         button {
             width: 100%;
             padding: 12px 20px;
@@ -354,6 +360,7 @@
             <div id="character-info">
                 <div id="character-name"></div>
                 <div id="character-age"></div>
+                <div id="character-money"></div>
             </div>
         </div>
         <div id="stats">
@@ -524,6 +531,9 @@
                     looks: 50
                 },
 
+                // Add money property
+                money: 0,  // Start with 0 money
+
                 // Life events and characteristics (filled as they grow)
                 job: null,
                 education: null,
@@ -557,14 +567,33 @@
                     minAge: 0,
                     maxAge: 1
                 },
-                description: "You are born into this world.",
-                
+                description: "You are born into this world, your parents are overjoyed.",
                 choices: [
                     {
                         text: "Cry",
                         effect: { happiness: 20, smarts: 20, health: 20 },
-                        result: "You are born into this world",
-                }]
+                        result: function(state) {
+                            const mom = generatePerson();
+                            const dad = generatePerson();
+                            
+                            // Assign parents to the state
+                            state.relationships.push(
+                                {
+                                    person: mom,
+                                    status: "family",
+                                    level: 80
+                                },
+                                {
+                                    person: dad,
+                                    status: "family",
+                                    level: 80
+                                }
+                            );
+
+                            return `You are born into this world, your parents are overjoyed. Your mom is ${mom.firstName} and your dad is ${dad.firstName}.`;
+                        }
+                    }
+                ]
             },
             // Young Kids (0-5)
             {
@@ -582,15 +611,13 @@
                         effect: { happiness: 10, smarts: 5 },
                         result: "Your mother is overjoyed! This strengthens your bond with her.",
                         onSelect: (state) => {
-                            state.relationships.push({
-                                person: {
-                                    name: "Mom",
-                                    personality: "Loving",
-                                    interests: ["Family", "Nurturing"]
-                                },
-                                status: "family",
-                                level: 80
-                            });
+                            // Find mom in relationships array and increase level
+                            const momRelationship = state.relationships.find(rel => 
+                                rel.status === "family" && rel.person.gender === "Female"
+                            );
+                            if (momRelationship) {
+                                momRelationship.level += 25;
+                            }
                         }
                     },
                     {
@@ -598,15 +625,13 @@
                         effect: { happiness: 10, smarts: 5 },
                         result: "Your father beams with pride! This strengthens your bond with him.",
                         onSelect: (state) => {
-                            state.relationships.push({
-                                person: {
-                                    name: "Dad",
-                                    personality: "Proud",
-                                    interests: ["Family", "Protection"]
-                                },
-                                status: "family",
-                                level: 80
-                            });
+                            // Find dad in relationships array and increase level
+                            const dadRelationship = state.relationships.find(rel => 
+                                rel.status === "family" && rel.person.gender === "Male"
+                            );
+                            if (dadRelationship) {
+                                dadRelationship.level += 25;
+                            }
                         }
                     },
                     {
@@ -728,8 +753,54 @@
                     }
                 ]
             },
+            // Get a paper route and earn $100 a week
+            {
+                weight: 3,
+                title: "Paper Route",
+                requirements: {
+                    minAge: 6,
+                    maxAge: 16,
+                    minMoney: 100
+                },
+                description: "You get a paper route and earn $50 a week.",
+                choices: [
+                    {
+                        text: "Accept the paper route",
+                        effect: { money: 2500 },
+                        result: "You earned $2,500 from your paper route.  You're a paper route legend!"
+                    }
+                ]
+            },        
+            
+            // Grandma dies and leaves you $5,000
+            {
+                weight: 3,
+                title: "Grandma's Legacy",
+                requirements: {
+                    minAge: 2,
+                    maxAge: 35,
+                    maxMoney: 50000
+                },
+                description: "Your grandma died and left you $5,000.",
+                choices: [
+                    {
+                        text: "Invest it in the stock market",
+                        effect: { money: 8000 },
+                        result: "You invested in the stock market and made $8,000."
+                    },
+                    {
+                        text: "Donate it to charity in Grannies Honor",
+                        effect: { happiness: 15, health: 5 },
+                        result: "You donated the money to charity in Grannies Honor.  You feel good about yourself."
 
-
+                    },
+                    {
+                        text: "Buy a new car",
+                        effect: { money: 0 },
+                        result: "You bought a used car.  Thanks Grandma!"
+                    }
+                ]
+            },    
             // Elementry School Events (age 6-11)
 
             // Spelling Bee Event
@@ -765,6 +836,7 @@
             {
                 weight: 1,
                 title: "Perfect Attendance",
+                repeatable: true,
                 requirements: {
                     minAge: 6,
                     maxAge: 11
@@ -1309,6 +1381,18 @@
                     minHappiness: 50
                 },
                 description: "You feel inspired to train for a marathon..."
+            },
+            {
+                weight: 2,
+                title: "Scammed",
+                requirements: {
+                    minAge: 18,
+                    maxAge: 100,
+                    minMoney: 2000
+                },
+                description: "You've been scammed!  I guess Nigerian princes aren't as rich as they say.",
+                effect: { money: -2000 },  // Deduct $200
+                message: "You got scammed out of $2000. I guess Nigerian princes aren't as rich as they say."
             }
     ]// Close the events array
 
@@ -1397,8 +1481,13 @@
 
         function applyEventEffects(effects) {
             Object.entries(effects).forEach(([stat, value]) => {
-                state.stats[stat] = Math.max(0, Math.min(100, state.stats[stat] + value));
+                if (stat === 'money') {
+                    state.money += value;  // Update money
+                } else {
+                    state.stats[stat] = Math.max(0, Math.min(100, state.stats[stat] + value));
+                }
             });
+            updateUI();  // Ensure UI is updated after applying effects
         }
 
         // UI Updates
@@ -1406,6 +1495,7 @@
             document.getElementById('avatar').textContent = state.avatar;
             document.getElementById('character-name').textContent = state.name;
             document.getElementById('character-age').textContent = `Age: ${state.age}`;
+            document.getElementById('character-money').textContent = `Money: $${state.money}`;
             document.getElementById('happiness').textContent = `Happiness: ${state.stats.happiness}`;
             document.getElementById('health').textContent = `Health: ${state.stats.health}`;
             document.getElementById('smarts').textContent = `Smarts: ${state.stats.smarts}`;
@@ -1455,9 +1545,9 @@
                     const relationshipDiv = document.createElement('div');
                     relationshipDiv.className = 'relationship-item';
                     relationshipDiv.innerHTML = `
-                        <span>${relationshipEmoji} ${rel.person.name}</span>
+                        <span>${relationshipEmoji} ${rel.person.firstName}</span>
                         <span class="relationship-status">${formatRelationshipStatus(rel.status)}</span>
-                        <span class="relationship-level">Level: ${rel.level}</span>
+                        <span class="relationship-level">Relationship Score: ${rel.level}</span>
                     `;
                     relationshipsList.appendChild(relationshipDiv);
                 });
@@ -1607,9 +1697,14 @@
             const personalities = ["Shy", "Outgoing", "Funny", "Serious", "Creative", "Athletic", "Nerdy", "Dramatic"];
             const interests = ["Video Games", "Sports", "Art", "Music", "Reading", "Cooking", "Travel", "Science"];
             
+            const fullName = generateRandomName();
+            const [firstName, lastName] = fullName.split(" ");
+
             return {
                 id: Math.random().toString(36).substr(2, 9),
-                name: generateRandomName(),
+                name: fullName,
+                firstName: firstName,
+                lastName: lastName,
                 age: Math.floor(Math.random() * 20) + 5, // 5-25 years old, later we'll want to change this so they age with you
                 gender: Math.random() < 0.5 ? "Male" : "Female",
                 personality: personalities[Math.floor(Math.random() * personalities.length)],
@@ -1621,9 +1716,7 @@
                 },
                 relationshipStatus: "stranger" // stranger, acquaintance, friend, good_friend, best_friend, enemy, dating, married, divorced
             };
-            console.log(name);
-            console.log(personalities);
-            console.log(interests);
+
         }
         // Helper functions for relationship management
         function getRandomStranger(state) {
@@ -1695,7 +1788,12 @@
                 .join(' ');
         }
 
-        // Add this function to your script
+
+
+        // CHEATS FOR TESTING
+
+        // Cheat to trigger an event by title
+        // triggerEventByTitle("Birth");
         function triggerEventByTitle(title) {
             const event = events.find(e => e.title === title);
             
@@ -1724,10 +1822,23 @@
             
             updateAvatar();
             updateUI();
+        }        
+
+        // Change your age by calling setAge(25);
+        function setAge(newAge) {
+            if (typeof newAge !== 'number' || newAge < 0) {
+                console.warn("Invalid age. Please enter a non-negative number.");
+                return;
+            }
+            
+            state.age = newAge;
+            console.log(`Age set to: ${state.age}`);
+            
+            // Update the avatar and UI to reflect the new age
+            updateAvatar();
+            updateUI();
         }
 
-        // Example usage in the console:
-        // triggerEventByTitle("Birth");
     </script>
 </body>
 </html>
