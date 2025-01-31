@@ -10,10 +10,8 @@
             margin: 0;
             padding: 0;
             font-family: 'Patrick Hand', cursive;
-            min-height: 100vh;
-            position: fixed;
+            min-height: 100%;
             width: 100%;
-            overflow: hidden;
         }
 
         #game-container {
@@ -25,9 +23,10 @@
             background: white;
             border-radius: 15px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            height: 90vh;
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
+            margin-bottom: 20px;
         }
 
         #stats {
@@ -60,7 +59,7 @@
         }
 
         #story-log {
-            flex: 1;
+            max-height: 40vh;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             padding: 12px;
@@ -214,13 +213,6 @@
             background: #45a049;
         }
 
-        /* Add viewport-height fix for mobile browsers */
-        @supports (-webkit-touch-callout: none) {
-            #game-container {
-                height: -webkit-fill-available;
-            }
-        }
-
         /* Adjust for mobile notches and bars */
         @supports (padding: max(0px)) {
             #game-container {
@@ -231,13 +223,45 @@
             }
         }
 
-        #character-stats-table {
-            margin-top: 15px;
+        #relationships-container {
+            margin-top: 20px;
             padding: 15px;
             background: #fff;
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 2px solid #e0e0e0;
+        }
+
+        #relationships-container h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            text-align: center;
+        }
+
+        .relationship-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .relationship-status {
+            font-style: italic;
+            color: #666;
+        }
+
+        .relationship-level {
+            font-size: 0.9em;
+            color: #888;
+        }
+
+        #character-stats-table {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
         }
 
         #character-stats-table h3 {
@@ -306,40 +330,6 @@
 
         .choice-button:hover {
             background: #45a049;
-        }
-
-        #relationships-container {
-            margin-top: 15px;
-            padding: 15px;
-            background: #fff;
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            border: 2px solid #e0e0e0;
-        }
-
-        #relationships-container h3 {
-            margin: 0 0 10px 0;
-            color: #333;
-            text-align: center;
-        }
-
-        .relationship-item {
-            padding: 8px;
-            margin: 5px 0;
-            border-bottom: 1px solid #eee;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .relationship-status {
-            font-style: italic;
-            color: #666;
-        }
-
-        .relationship-level {
-            font-size: 0.9em;
-            color: #888;
         }
     </style>
 </head>
