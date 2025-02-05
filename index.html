@@ -30,6 +30,7 @@
         }
 
         #stats {
+            max-height: 30vh;
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 8px;
@@ -59,7 +60,7 @@
         }
 
         #story-log {
-            max-height: 40vh;
+            max-height: 30vh;
             border: 2px solid #e0e0e0;
             border-radius: 10px;
             padding: 12px;
@@ -117,30 +118,67 @@
             margin: 0;
         }
 
-        button {
-            width: 100%;
-            padding: 12px 20px;
-            font-size: 1.2em;
-            font-family: 'Patrick Hand', cursive;
+        /* Control strip styling */
+        .control-strip {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            gap: 20px;
+        }
+
+        .control-button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 20px;
             background: #4CAF50;
             color: white;
-            border: none;
-            border-radius: 10px;
+            font-size: 0.9em;
             cursor: pointer;
-            transition: background 0.3s, transform 0.2s;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            flex-shrink: 0;
-            margin-top: auto;
-            margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+            transition: all 0.3s ease;
         }
 
-        button:hover {
+        .control-button:hover {
             background: #45a049;
-            transform: scale(1.02);
+            transform: translateY(-2px);
         }
 
-        button:active {
-            transform: scale(0.98);
+        .year-button {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: #4CAF50;
+            border: none;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+
+        .year-button:hover {
+            background: #45a049;
+            transform: scale(1.05);
+        }
+
+        .year-button .plus {
+            font-size: 24px;
+            font-weight: bold;
+            line-height: 1;
+        }
+
+        .year-button .year-text {
+            font-size: 14px;
+            margin-top: 2px;
         }
 
         /* Custom scrollbar */
@@ -224,11 +262,14 @@
         }
 
         #relationships-container {
+            max-height: 25vh;
             margin-top: 20px;
             padding: 15px;
             background: #fff;
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         #relationships-container h3 {
@@ -324,6 +365,7 @@
             background: #4CAF50;
             color: white;
             font-size: 1.1em;
+            font-family: 'Patrick Hand', cursive;
             cursor: pointer;
             transition: background 0.3s;
         }
@@ -331,9 +373,69 @@
         .choice-button:hover {
             background: #45a049;
         }
+
+        /* Minimal Characters Button and Modal */
+        #showCharactersButton {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            z-index: 1100;
+            padding: 5px 10px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+
+        #charactersModal {
+            display: none;
+            position: fixed;
+            top: 50px;
+            right: 20px;
+            left: auto;
+            z-index: 1500;
+            background-color: white;
+            padding: 10px;
+            border: 1px solid #ccc;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+
+        #closeCharactersModal {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+        }
+
+        /* Custom scrollbar for relationships container */
+        #relationships-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #relationships-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #relationships-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        #relationships-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
     </style>
 </head>
 <body>
+    <!-- Minimal Characters Button and Modal -->
+    <button id="showCharactersButton" style="position: fixed; top: 10px; right: 10px; z-index: 1100; padding: 5px 10px; background: #4CAF50; color: white; border: none; border-radius: 4px;">Characters</button>
+    <div id="charactersModal" style="display: none; position: fixed; top: 50px; right: 20px; left: auto; z-index: 1500; background-color: white; padding: 10px; border: 1px solid #ccc; max-height: 80%; overflow-y: auto;">
+        <button id="closeCharactersModal" style="position: absolute; top: 2px; right: 2px;">Close</button>
+        <h3>Town Characters</h3>
+        <div id="charactersContent"></div>
+    </div>
+
     <div class="modal-overlay" id="deathModal">
         <div class="modal">
             <h2>💀 Game Over 💀</h2>
@@ -360,7 +462,16 @@
             <div class="stat" id="looks">Looks: 50</div>
         </div>
         <div id="story-log"></div>
-        <button onclick="advanceYear()">+ Year</button>
+        <div class="control-strip">
+            <button class="control-button" onclick="showJobPanel()">Job</button>
+            <button class="control-button" onclick="showAssetsPanel()">Assets</button>
+            <button class="year-button" onclick="advanceYear()">
+                <span class="plus">+</span>
+                <span class="year-text">Year</span>
+            </button>
+            <button class="control-button" onclick="showRelationshipsPanel()">Relations</button>
+            <button class="control-button" onclick="showStatsPanel()">Stats</button>
+        </div>
         
         <!-- New Character Stats Table -->
         <div id="relationships-container">
@@ -440,44 +551,8 @@
     </div>
 
     <script src="dialogSystem.js"></script>
+    <script src="characterGenerator.js"></script>
     <script>
-            // Name Lists (add at bottom of file)
-            const firstNames = [
-            "James", "Emma", "Oliver", "Sophia", "William",
-            "Isabella", "Henry", "Charlotte", "Alexander", "Mia",
-            "Benjamin", "Amelia", "Lucas", "Harper", "Theodore",
-            "Evelyn", "Daniel", "Abigail", "Joseph", "Elizabeth",
-            "Samuel", "Sofia", "David", "Victoria", "Andrew"
-        ];
-
-        const europeanLastNames = [
-            { name: "Smith", origin: "european" },
-            { name: "Johnson", origin: "european" },
-            { name: "Williams", origin: "european" },
-            { name: "Brown", origin: "european" },
-            { name: "Jones", origin: "european" },
-            { name: "Garcia", origin: "european" },
-            { name: "Miller", origin: "european" },
-            { name: "Davis", origin: "european" },
-            { name: "Rodriguez", origin: "european" },
-            { name: "Martinez", origin: "european" },
-            { name: "Anderson", origin: "european" },
-            { name: "Taylor", origin: "european" },
-            { name: "Thomas", origin: "european" },
-            { name: "Moore", origin: "european" },
-            { name: "Martin", origin: "european" },
-            { name: "Jackson", origin: "european" },
-            { name: "Thompson", origin: "european" },
-            { name: "White", origin: "european" },
-            { name: "Lopez", origin: "european" },
-            { name: "Lee", origin: "european" },
-            { name: "Harris", origin: "european" },
-            { name: "Clark", origin: "european" },
-            { name: "Lewis", origin: "european" },
-            { name: "Robinson", origin: "european" },
-            { name: "Walker", origin: "european" }
-        ];
-
         // Game State
         function initializeState() {
             // Helper function to get random personality type
@@ -548,6 +623,48 @@
         }
 
         let state = initializeState();
+        
+        // Initialize town characters
+        console.log("About to generate core characters"); // Debug log
+        state.town = generateCoreCharacters(40);
+        console.log("Generated town characters:", state.town); // Debug log
+
+        // Characters modal functionality
+        function updateCharactersModal() {
+            const container = document.getElementById('charactersContent');
+            container.innerHTML = ''; // Clear previous content
+            console.log("Current state.town:", state.town); // Debug log
+            if (state.town && state.town.length > 0) {
+                state.town.forEach(character => {
+                    const charDiv = document.createElement('div');
+                    charDiv.style.borderBottom = "1px solid #eee";
+                    charDiv.style.marginBottom = "8px";
+                    charDiv.style.paddingBottom = "4px";
+                    charDiv.innerHTML = `<strong>${character.name}</strong> 
+                        (Age: ${character.age}, ${character.gender})<br>
+                        Personality: ${character.personality}<br>
+                        Stats: Happiness: ${character.stats.happiness}, Health: ${character.stats.health}, Smarts: ${character.stats.smarts}, Looks: ${character.stats.looks}`;
+                    container.appendChild(charDiv);
+                });
+            } else {
+                console.log("No characters found in state.town"); // Debug log
+                container.innerHTML = 'No characters available';
+            }
+        }
+
+        // Add event listeners for the characters modal
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("Setting up modal listeners"); // Debug log
+            document.getElementById('showCharactersButton').addEventListener('click', function() {
+                updateCharactersModal();
+                document.getElementById('charactersModal').style.display = 'block';
+            });
+
+            document.getElementById('closeCharactersModal').addEventListener('click', function() {
+                document.getElementById('charactersModal').style.display = 'none';
+            });
+        });
+
         // Event System
         const events = [
             //Birth event
@@ -581,7 +698,7 @@
                                 }
                             );
 
-                            return `You are born into this world, your parents are overjoyed. Your mom is ${mom.firstName} and your dad is ${dad.firstName}.`;
+                            return `You are born into this world, your parents are overjoyed. Your mom is ${mom.name} and your dad is ${dad.name}.`;
                         }
                     }
                 ]
@@ -591,6 +708,7 @@
                 weight: 100,
                 title: "Death",
                 requirements: {
+                    minAge: 6,
                     minAge: 16,
                     maxAge: 25
                 },
@@ -1567,7 +1685,7 @@
                     const relationshipDiv = document.createElement('div');
                     relationshipDiv.className = 'relationship-item';
                     relationshipDiv.innerHTML = `
-                        <span>${relationshipEmoji} ${rel.person.firstName}</span>
+                        <span>${relationshipEmoji} ${getCharacterDisplayName(rel.person)}</span>
                         <span class="relationship-status">${formatRelationshipStatus(rel.status)}</span>
                         <span class="relationship-level">Relationship Score: ${rel.level}</span>
                     `;
@@ -1673,6 +1791,10 @@
             // Reset the game state
             state = initializeState();
             
+            // Get and display life number
+            const lifeNumber = (parseInt(localStorage.getItem("deathCount") || "0")) + 1;
+            console.log(`Starting Life #${lifeNumber}`);
+            
             // Clear the story log
             const log = document.getElementById('story-log');
             log.innerHTML = '';
@@ -1686,13 +1808,6 @@
             
             // Update UI
             updateUI();
-        }
-
-        // Function to generate random name
-        function generateRandomName() {
-            const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-            const lastName = europeanLastNames[Math.floor(Math.random() * europeanLastNames.length)].name;
-            return `${firstName} ${lastName}`;
         }
 
         // Add choice handling functions
@@ -1741,32 +1856,6 @@
             updateUI();
         }
 
-        // Person generator
-        function generatePerson() {
-            const personalities = ["Shy", "Outgoing", "Funny", "Serious", "Creative", "Athletic", "Nerdy", "Dramatic"];
-            const interests = ["Video Games", "Sports", "Art", "Music", "Reading", "Cooking", "Travel", "Science"];
-            
-            const fullName = generateRandomName();
-            const [firstName, lastName] = fullName.split(" ");
-
-            return {
-                id: Math.random().toString(36).substr(2, 9),
-                name: fullName,
-                firstName: firstName,
-                lastName: lastName,
-                age: Math.floor(Math.random() * 20) + 5, // 5-25 years old, later we'll want to change this so they age with you
-                gender: Math.random() < 0.5 ? "Male" : "Female",
-                personality: personalities[Math.floor(Math.random() * personalities.length)],
-                interests: [interests[Math.floor(Math.random() * interests.length)]],
-                stats: {
-                    happiness: Math.floor(Math.random() * 50) + 50,
-                    smarts: Math.floor(Math.random() * 50) + 50,
-                    looks: Math.floor(Math.random() * 50) + 50
-                },
-                relationshipStatus: "stranger" // stranger, acquaintance, friend, good_friend, best_friend, enemy, dating, married, divorced
-            };
-
-        }
         // Helper functions for relationship management
         function getRandomStranger(state) {
             return state.potentialRelationships.find(person => 
@@ -1910,6 +1999,32 @@
         // Dialog System
         
 
+        // Add these functions after your existing JavaScript
+        function showJobPanel() {
+            console.log("Job panel clicked");
+            // Implementation coming soon
+        }
+
+        function showAssetsPanel() {
+            console.log("Assets panel clicked");
+            // Implementation coming soon
+        }
+
+        function showRelationshipsPanel() {
+            // We can reuse your existing characters modal functionality here
+            updateCharactersModal();
+            document.getElementById('charactersModal').style.display = 'block';
+        }
+
+        function showStatsPanel() {
+            console.log("Stats panel clicked");
+            // Implementation coming soon
+        }
+
+        // Add this helper function
+        function getCharacterDisplayName(person) {
+            return person.name || `${person.firstName} ${person.lastName}` || "Unknown";
+        }
 
     </script>
 </body>
