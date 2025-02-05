@@ -552,6 +552,7 @@
 
     <script src="dialogSystem.js"></script>
     <script src="characterGenerator.js"></script>
+    <script src="timeHandler.js"></script>
     <script>
         // Game State
         function initializeState() {
@@ -1696,9 +1697,10 @@
 
         // Main Game Loop
         function advanceYear() {
-            state.year++;
-            state.age++;
+            // Increment the global year and update the player's age and all characters' ages.
+            advanceYearAndAges();
             
+            // Retrieve a random event for the new year.
             const event = getRandomEvent();
             
             if (!event) {
@@ -1709,21 +1711,24 @@
             
             // Log the event that was selected
             console.log("Event fired:", event.title);
-            console.log("Year:", state.year, "Health:", state.stats.health, "Happiness:", state.stats.happiness, "Smarts:", state.stats.smarts, "Looks:", state.stats.looks);
+            console.log("Year:", state.year, 
+                        "Health:", state.stats.health, 
+                        "Happiness:", state.stats.happiness, 
+                        "Smarts:", state.stats.smarts, 
+                        "Looks:", state.stats.looks);
             
             if (event.choices) {
-                // If event has choices, show the choice modal
+                // If the event has choices, display the choice modal.
                 showChoice(event);
             } else {
-                // Handle regular events
+                // Otherwise, simply apply the event effect.
                 applyEventEffects(event.effect);
                 if (event.onTrigger) {
                     event.onTrigger(state);
                 }
                 
                 const log = document.getElementById('story-log');
-                log.insertAdjacentHTML('afterbegin', 
-                    `<div><strong>Age ${state.age}</strong>: ${event.message}</div>`);
+                log.insertAdjacentHTML('afterbegin', `<div><strong>Age ${state.age}</strong>: ${event.message}</div>`);
             }
             
             updateAvatar();
@@ -1791,7 +1796,10 @@
             // Reset the game state
             state = initializeState();
             
-            // Get and display life number
+            // Reset the global simulation year to 0.
+            resetGlobalYear();
+            
+            // Get and display the new life number.
             const lifeNumber = (parseInt(localStorage.getItem("deathCount") || "0")) + 1;
             console.log(`Starting Life #${lifeNumber}`);
             
