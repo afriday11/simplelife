@@ -1,32 +1,94 @@
 /*
  * timeHandler.js
  *
- * This file handles the passage of time (global year) in LifeSim MVP.
- * When the player presses the "+ Year" button the following happens:
- *   - The global simulation year (state.year) is incremented.
- *   - The player's age (state.age) and every other character's age
- *     in the simulation increases by 1.
+ * This file handles the passage of time in RogueLife.
+ * It manages three distinct time concepts:
  *
- * Additionally, when a character dies and a new life begins,
- * the global year is reset to 0.
+ * 1. Character Age: The age of the current player character
+ *    - Increments by 1 each year
+ *    - Resets to 0 on death (unless taking over an existing character)
  *
- * Note: This script assumes that there is a global 'state' object that contains:
- *   - state.year (the global simulation year)
- *   - state.age (the player's age)
- *   - state.town (an array of town characters)
- *   - state.relationships (an array of relationship objects, where each object has a "person" property)
- *   - state.potentialRelationships (an array of potential relationship person objects)
+ * 2. Global Year: The current year in the game world
+ *    - Increments by 1 each year
+ *    - Persists across character deaths
+ *    - Stored in localStorage to persist across sessions
+ *
+ * 3. Total Years Played: Cumulative years across all characters
+ *    - Increments by 1 each year
+ *    - Never resets
+ *    - Stored in localStorage to persist across sessions
  */
+
+// Initialize time tracking on first load
+function initializeTimeTracking() {
+    // Initialize global year if not already set
+    if (!localStorage.getItem('globalYear')) {
+        localStorage.setItem('globalYear', '0');
+    }
+    
+    // Initialize total years played if not already set
+    if (!localStorage.getItem('totalYearsPlayed')) {
+        localStorage.setItem('totalYearsPlayed', '0');
+    }
+    
+    // Log initialization
+    console.log('Time tracking initialized:');
+    console.log('- Global Year:', getGlobalYear());
+    console.log('- Total Years Played:', getTotalYearsPlayed());
+}
+
+// Get the current global year
+function getGlobalYear() {
+    return parseInt(localStorage.getItem('globalYear') || '0');
+}
+
+// Set the global year to a specific value
+function setGlobalYear(year) {
+    if (typeof year !== 'number' || year < 0) {
+        console.warn("Invalid year. Please enter a non-negative number.");
+        return;
+    }
+    
+    localStorage.setItem('globalYear', year.toString());
+    console.log(`Global year set to: ${year}`);
+    
+    // Update UI if needed
+    if (typeof updateUI === 'function') {
+        updateUI();
+    }
+    
+    return year;
+}
+
+// Get the total years played across all characters
+function getTotalYearsPlayed() {
+    return parseInt(localStorage.getItem('totalYearsPlayed') || '0');
+}
+
+// Increment the total years played
+function incrementTotalYearsPlayed() {
+    const currentTotal = getTotalYearsPlayed();
+    localStorage.setItem('totalYearsPlayed', (currentTotal + 1).toString());
+    return currentTotal + 1;
+}
 
 // Increments the global simulation year and updates the age of every character.
 function advanceYearAndAges() {
-    // Increment the global simulation year.
-    state.year++;
-    // Increment the player's age.
+    // Increment the global simulation year
+    const newGlobalYear = getGlobalYear() + 1;
+    setGlobalYear(newGlobalYear);
+    
+    // Increment the total years played
+    incrementTotalYearsPlayed();
+    
+    // Increment the player's age
     state.age++;
-
-    // Update the age for all characters in the simulation.
+    
+    // Update the age for all characters in the simulation
     updateAllAges();
+    
+    // Log time progression
+    console.log(`Advanced time: Year ${newGlobalYear}, Character Age ${state.age}, Total Years Played ${getTotalYearsPlayed()}`);
 }
 
 // Updates the age of every person in the simulation.
@@ -56,7 +118,30 @@ function updateAllAges() {
     }
 }
 
-// Resets the global simulation year (e.g., on a new life).
+// Resets the global simulation year (e.g., on a new game)
 function resetGlobalYear() {
-    state.year = 0;
-} 
+    setGlobalYear(0);
+    console.log("Global year reset to 0");
+}
+
+// Reset total years played (for debugging or complete game reset)
+function resetTotalYearsPlayed() {
+    localStorage.setItem('totalYearsPlayed', '0');
+    console.log("Total years played reset to 0");
+}
+
+// Debug function to display all time-related information
+function debugTimeInfo() {
+    const timeInfo = {
+        characterAge: state.age,
+        globalYear: getGlobalYear(),
+        totalYearsPlayed: getTotalYearsPlayed(),
+        deathCount: parseInt(localStorage.getItem("deathCount") || "0")
+    };
+    
+    console.table(timeInfo);
+    return timeInfo;
+}
+
+// Call initialization on script load
+initializeTimeTracking(); 
