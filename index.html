@@ -285,8 +285,95 @@
         // Initialize a set to track fired events
         let firedEvents = new Set();
 
+        // Enhanced event tracking structure
+        function initializeEventHistory() {
+            return {
+                currentLife: {},  // Events fired in current life with counts and years
+                permanent: new Set() // Events that should never repeat across lives
+            };
+        }
+
+        let eventHistory = initializeEventHistory();
+
+        // Track when an event fires
+        function trackEventFired(event) {
+            const eventId = event.id || event.title || event.message;
+            
+            // Handle permanent (once per game) events
+            if (event.repeatability === "once_per_game") {
+                eventHistory.permanent.add(eventId);
+            }
+            
+            // Track in current life history
+            if (!eventHistory.currentLife[eventId]) {
+                eventHistory.currentLife[eventId] = {
+                    count: 0,
+                    lastFiredYear: null
+                };
+            }
+            
+            eventHistory.currentLife[eventId].count++;
+            eventHistory.currentLife[eventId].lastFiredYear = state.age;
+            
+            // For backward compatibility, also track in the old firedEvents Set
+            if (!event.repeatable) {
+                firedEvents.add(eventId);
+            }
+        }
+
+        // Check if an event can fire based on its repeatability settings
+        function canEventFire(event) {
+            const eventId = event.id || event.title || event.message;
+            
+            // For backward compatibility with old event format
+            if (event.repeatability === undefined) {
+                // If repeatable is false and it's in the firedEvents Set, don't fire
+                if (!event.repeatable && firedEvents.has(eventId)) {
+                    return false;
+                }
+                return true;
+            }
+            
+            // Check permanent (once per game) events
+            if (event.repeatability === "once_per_game" && eventHistory.permanent.has(eventId)) {
+                return false;
+            }
+            
+            // Check once per life events
+            if (event.repeatability === "once_per_life" && eventHistory.currentLife[eventId]) {
+                return false;
+            }
+            
+            // If not in current life history, it can fire
+            if (!eventHistory.currentLife[eventId]) {
+                return true;
+            }
+            
+            const eventRecord = eventHistory.currentLife[eventId];
+            
+            // Check max occurrences
+            if (event.maxOccurrences && eventRecord.count >= event.maxOccurrences) {
+                return false;
+            }
+            
+            // Check cooldown
+            if (event.repeatability === "cooldown" && 
+                event.cooldownYears && 
+                (state.age - eventRecord.lastFiredYear) < event.cooldownYears) {
+                return false;
+            }
+            
+            // Default to allowing the event
+            return true;
+        }
+
         function getRandomEvent() {
             const eligibleEvents = gameEvents.filter(event => {
+                // First check repeatability using the new system
+                if (!canEventFire(event)) {
+                    return false;
+                }
+                
                 // Handle old event format
                 if (event.minAge !== undefined) {
                     return state.age >= event.minAge && state.age <= event.maxAge;
@@ -325,11 +412,6 @@
                     if (event.requirements.hasCar && !state.assets?.car) return false;
                 }
                 
-                // Check if the event is repeatable or has not been fired yet
-                if (!event.repeatable && firedEvents.has(event.title || event.message)) {
-                    return false;
-                }
-                
                 return true;
             });
             
@@ -342,9 +424,9 @@
             
             const selectedEvent = weightedEvents[Math.floor(Math.random() * weightedEvents.length)];
             
-            // Mark the event as fired
+            // Track the selected event using the new system
             if (selectedEvent) {
-                firedEvents.add(selectedEvent.title || selectedEvent.message);
+                trackEventFired(selectedEvent);
             }
             
             return selectedEvent;
@@ -531,6 +613,11 @@
             
             console.log("Event fired:", event.title || event.message);
             
+            // Clear any previous temporary receivers
+            if (event._currentReceiver) {
+                delete event._currentReceiver;
+            }
+            
             if (event.choices) {
                 // New format event with choices
                 showChoice(event);
@@ -554,9 +641,15 @@
                     statImpactHTML += '</div>';
                 }
                 
+                // Get the description, which might be a function that needs the state
+                let description = event.message || event.description;
+                if (typeof description === 'function') {
+                    description = description(state);
+                }
+                
                 const log = document.getElementById('story-log');
                 log.insertAdjacentHTML('afterbegin', 
-                    `<div><strong>Age ${state.age}</strong>: ${event.message || event.description}${statImpactHTML}</div>`
+                    `<div><strong>Age ${state.age}</strong>: ${description}${statImpactHTML}</div>`
                 );
             }
             
@@ -587,13 +680,18 @@
 
             const dialogKey = `death${currentDeathCount}`;
 
-            // Show the dialog for "deathN"
+            // Check if the dialog exists in dialogConfig before trying to show it
+            if (dialogConfig[dialogKey]) {
             showDialog(dialogKey, {
                 onDone: () => {
                     // At the end, actually start a new life
                     startNewLife();
                 }
             });
+            } else {
+                // If no dialog exists for this death count, just start a new life
+                startNewLife();
+            }
         }
 
         function showDeathModal() {
@@ -645,12 +743,11 @@
             const log = document.getElementById('story-log');
             log.innerHTML = '';
             
+            // Reset current life event history while preserving permanent history
+            eventHistory.currentLife = {};
+            
             // Hide the death modal
             document.getElementById('deathModal').style.display = 'none';
-            
-            // Reset the fired events set
-            // We can remove this if we decide to keep the events from firing multiple times
-            firedEvents = new Set();
             
             // Update UI
             updateUI();
@@ -664,9 +761,14 @@
             const buttonsContainer = document.getElementById('choiceButtons');
             
             title.textContent = event.title || 'Make a Choice';
-            description.textContent = typeof event.description === 'function' 
-                ? event.description(state) 
-                : event.description;
+            
+            // Get the description, which might be a function that needs the state
+            let descriptionText = event.description;
+            if (typeof descriptionText === 'function') {
+                descriptionText = descriptionText(state);
+            }
+            
+            description.textContent = descriptionText;
             
             buttonsContainer.innerHTML = '';
             
@@ -691,9 +793,30 @@
                 choice.onSelect(state, event);
             }
             
-            const resultText = typeof choice.result === 'function' 
-                ? choice.result(state, event) 
-                : choice.result;
+            // Get the result, which might be a function that needs the state and event
+            let resultText = choice.result;
+            if (typeof resultText === 'function') {
+                resultText = resultText(state, event);
+            }
+            
+            // Handle result objects with message and effects
+            if (resultText && typeof resultText === 'object' && resultText.message) {
+                if (resultText.effects) {
+                    // Apply additional effects from the result
+                    const additionalChanges = applyEventEffects(resultText.effects.doer || {});
+                    
+                    // Merge with existing stat changes
+                    Object.entries(additionalChanges).forEach(([stat, value]) => {
+                        if (statChanges[stat]) {
+                            statChanges[stat] += value;
+                        } else {
+                            statChanges[stat] = value;
+                        }
+                    });
+                }
+                
+                resultText = resultText.message;
+            }
             
             // Create stat impact text
             let statImpactHTML = '';
@@ -774,13 +897,21 @@
                 'enemy': '😠',
                 'dating': '💕',
                 'married': '💑',
-                'divorced': '💔'
+                'divorced': '💔',
+                'mom': '👩',    // Added mom emoji
+                'dad': '👨',    // Added dad emoji
+                'family': '👥'  // Keep generic family emoji for other family members
             };
             return emojis[status] || '👤';
         }
 
         // Helper function to format relationship status
         function formatRelationshipStatus(status) {
+            // Special cases for parents
+            if (status === 'mom') return 'Mother';
+            if (status === 'dad') return 'Father';
+            
+            // Default formatting for other statuses
             return status.split('_')
                 .map(word => word.charAt(0).toUpperCase() + word.slice(1))
                 .join(' ');
@@ -798,13 +929,18 @@
 
             const dialogKey = `death${currentDeathCount}`;
 
-            // Show the dialog for "deathN"
+            // Check if the dialog exists in dialogConfig before trying to show it
+            if (dialogConfig[dialogKey]) {
             showDialog(dialogKey, {
                 onDone: () => {
                     // At the end, actually start a new life
                     startNewLife();
                 }
             });
+            } else {
+                // If no dialog exists for this death count, just start a new life
+                startNewLife();
+            }
         }
 
         // CHEATS FOR TESTING
@@ -899,7 +1035,8 @@
 
         // Add this helper function
         function getCharacterDisplayName(person) {
-            return person.name || `${person.firstName} ${person.lastName}` || "Unknown";
+            if (!person) return "Unknown";
+            return person.name || `${person.firstName || ''} ${person.lastName || ''}`.trim() || "Unknown";
         }
 
         // New helper functions

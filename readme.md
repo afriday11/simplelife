@@ -164,3 +164,348 @@ console.log(state.town); // Get list of characters in town
 setGlobalYear(2050)  // Sets the global year to 2050
 advanceGlobalYear(5)  // Advances the global year by 5 years
 advanceGlobalYear()   // Advances the global year by 1 year (default)
+
+
+
+
+
+
+
+
+
+
+
+I tried to create a new kind of event that required specific types of people and also updated their status afterwards.  We were getting close to it working, but it required a ton of code within the event, which I really didn't want to deal with. I've removed the code for now, but have saved it here in case we want to pick this up again.
+
+It should also be noted there is a bunch of questionable code at the beginning of events.js, but I'm not gonna mess with it for now.
+
+    {
+        id: "lovers_quarrel",
+        type: EventType.SOCIAL,
+        title: "Lover's Quarrel",
+        weight: 3,
+        repeatability: "cooldown",  // Can repeat after a cooldown period
+        cooldownYears: 2,           // Must wait 2 years between quarrels
+        receiverRequirement: RelationshipRequirement.SPOUSE,
+        requirements: {
+            minAge: 18,
+            maxAge: 90,
+            isMarried: true
+        },
+        description: function(doer) {
+            // Find a spouse using our helper function
+            const spouse = findReceiver({ relationshipStatus: "married" });
+            
+            // If no spouse found, this event shouldn't trigger
+            // But just in case, store a placeholder
+            if (!spouse) {
+                console.warn("Lover's Quarrel triggered but no spouse found");
+                this._currentReceiver = { name: "your spouse" };
+                return "You and your spouse are having a heated argument...";
+            }
+            
+            // Store the spouse temporarily for this event execution
+            this._currentReceiver = spouse;
+            
+            const topics = ['household chores', 'spending habits', 'time management'];
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            
+            return `You and ${spouse.name} are having a heated argument about ${randomTopic}...`;
+        },
+        effects: {
+            doer: {
+                happiness: -5,
+                health: -2
+            },
+            receiver: {
+                happiness: -5,
+                health: -2
+            }
+        },
+        choices: [
+            {
+                text: "Try to understand their perspective",
+                result: function(doer, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    
+                    // Update relationship if it exists
+                    const relationship = state.relationships.find(r => 
+                        r.person.id === receiver.id
+                    );
+                    
+                    if (relationship) {
+                        relationship.level += 5;
+                    }
+                    
+                    return {
+                        message: `You and ${receiver.name} had a heart-to-heart conversation and grew closer.`,
+                        effects: {
+                            doer: { happiness: 8, smarts: 2 }
+                        }
+                    };
+                }
+            },
+            {
+                text: "Stand your ground",
+                result: function(doer, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    
+                    // Update relationship if it exists
+                    const relationship = state.relationships.find(r => 
+                        r.person.id === receiver.id
+                    );
+                    
+                    if (relationship) {
+                        relationship.level -= 5;
+                    }
+                    
+                    return {
+                        message: `The argument with ${receiver.name} intensified, causing strain in your relationship.`,
+                        effects: {
+                            doer: { happiness: -3 }
+                        }
+                    };
+                }
+            }
+        ]
+    },
+    {
+        id: "friendly_competition",
+        type: EventType.SOCIAL,
+        title: "Friendly Competition",
+        weight: 2,
+        repeatability: "unlimited",  // Can happen multiple times without restrictions
+        receiverRequirement: RelationshipRequirement.FRIEND,
+        requirements: {
+            minAge: 6,
+            maxAge: 90,
+            hasFriends: true
+        },
+        description: function(doer) {
+            // Find a friend using our helper function
+            // This will either find an existing friend or create a new one
+            const friend = getEventReceiver(this);
+            
+            // Store the friend temporarily for this event execution
+            this._currentReceiver = friend;
+            
+            const activities = ['video game tournament', 'sports match', 'trivia contest'];
+            const randomActivity = activities[Math.floor(Math.random() * activities.length)];
+            
+            return `${friend.name} challenges you to a ${randomActivity}...`;
+        },
+        effects: {
+            doer: {
+                happiness: 3,
+                health: 1
+            },
+            receiver: {
+                happiness: 3,
+                health: 1
+            }
+        },
+        choices: [
+            {
+                text: "Give it your all",
+                result: function(doer, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    
+                    // Update relationship if it exists
+                    const relationship = state.relationships.find(r => 
+                        r.person.id === receiver.id
+                    );
+                    
+                    if (relationship) {
+                        relationship.level += 5;
+                    }
+                    
+                    return {
+                        message: `You and ${receiver.name} had an intense competition, strengthening your friendship!`,
+                        effects: {
+                            doer: { happiness: 5, health: 2 }
+                        }
+                    };
+                }
+            },
+            {
+                text: "Let them win",
+                result: function(doer, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    
+                    // Update relationship if it exists
+                    const relationship = state.relationships.find(r => 
+                        r.person.id === receiver.id
+                    );
+                    
+                    if (relationship) {
+                        relationship.level += 3;
+                    }
+                    
+                    return {
+                        message: `${receiver.name} saw through your attempt to let them win, but appreciated the gesture.`,
+                        effects: {
+                            doer: { happiness: 6 }
+                        }
+                    };
+                }
+            }
+        ]
+    },
+
+    // New childhood event about taking a toy from another child and have it make us friends, or make us into enemies
+    {
+        id: "toy_theft",
+        type: EventType.SOCIAL,
+        title: "Toy Theft",
+        weight: 200,
+        repeatability: "once_per_life",  // Can only happen once per life
+        requirements: {
+            minAge: 2,
+            maxAge: 12,
+        },
+        description: function(doer) {
+            // Find or create a child of similar age using our new helper function
+            // We'll create a temporary receiver just for this event execution
+            const childAge = Math.max(1, doer.age + Math.floor(Math.random() * 3) - 1);
+            
+            // Create a new child or find an existing one
+            const receiver = findReceiver({ 
+                minAge: childAge - 1, 
+                maxAge: childAge + 1 
+            }) || createAndAddReceiver({
+                age: childAge,
+                personality: "Playful"
+            });
+            
+            // Add them as a stranger in relationships if they don't exist yet
+            if (!state.relationships.some(rel => rel.person.id === receiver.id)) {
+                state.relationships.push({
+                    person: receiver,
+                    status: "stranger",
+                    level: 0
+                });
+            }
+            
+            // Store the receiver temporarily for this event execution
+            this._currentReceiver = receiver;
+            
+            return `You see ${receiver.name} playing with a toy you want. What do you do?`;
+        },
+        effects: {
+            doer: {
+                happiness: -2,  // Initial anxiety about the situation
+                health: 0
+            },
+            receiver: {
+                happiness: 0,
+                health: 0
+            }
+        },
+        choices: [
+            {
+                text: "Take the toy from them violently",
+                effect: {
+                    happiness: 5,
+                    smarts: -2,
+                    health: -1
+                },
+                result: function(state, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    if (!receiver) {
+                        return "You grab the toy from another child. They cry, but you enjoy playing with it. Your parents are disappointed in your behavior.";
+                    }
+                    
+                    // Make sure the receiver is in the relationships array
+                    let relationship = state.relationships.find(r => r.person.id === receiver.id);
+                    if (!relationship) {
+                        relationship = {
+                            person: receiver,
+                            status: "stranger",
+                            level: 0
+                        };
+                        state.relationships.push(relationship);
+                    }
+                    
+                    // Update the relationship
+                    relationship.status = "enemy";
+                    relationship.level = -20;
+                    
+                    console.log("Updated relationship:", relationship); // Debug log
+                    
+                    return `You grab the toy from ${receiver.name}. They cry, but you enjoy playing with it. Your parents are disappointed in your behavior.`;
+                }
+            },
+            {
+                text: "Ask if you can play with it together",
+                effect: {
+                    happiness: 8,
+                    smarts: 5,
+                    health: 1
+                },
+                result: function(state, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    if (!receiver) {
+                        return "You ask another child if you can play together. They smile and make room for you. You both have fun playing together!";
+                    }
+                    
+                    // Make sure the receiver is in the relationships array
+                    let relationship = state.relationships.find(r => r.person.id === receiver.id);
+                    if (!relationship) {
+                        relationship = {
+                            person: receiver,
+                            status: "stranger",
+                            level: 0
+                        };
+                        state.relationships.push(relationship);
+                    }
+                    
+                    // Update the relationship
+                    relationship.status = "friend";
+                    relationship.level = 20;
+                    
+                    console.log("Updated relationship:", relationship); // Debug log
+                    
+                    return `${receiver.name} smiles and makes room for you. You both have fun playing together!`;
+                }
+            },
+            {
+                text: "Watch sadly from a distance",
+                effect: {
+                    happiness: 3,
+                    smarts: 2
+                },
+                result: function(state, event) {
+                    // Use the temporary receiver we stored during description
+                    const receiver = event._currentReceiver;
+                    if (!receiver) {
+                        return "You decide not to do anything. Another child notices your interest and offers to let you have a turn later.";
+                    }
+                    
+                    // Make sure the receiver is in the relationships array
+                    let relationship = state.relationships.find(r => r.person.id === receiver.id);
+                    if (!relationship) {
+                        relationship = {
+                            person: receiver,
+                            status: "stranger",
+                            level: 0
+                        };
+                        state.relationships.push(relationship);
+                    }
+                    
+                    // Update the relationship
+                    relationship.status = "friend";
+                    relationship.level = 10;
+                    
+                    console.log("Updated relationship:", relationship); // Debug log
+                    
+                    return `You decide not to do anything. ${receiver.name} notices your interest and offers to let you have a turn later.`;
+                }
+            }
+        ]
+    },

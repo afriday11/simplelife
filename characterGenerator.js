@@ -69,13 +69,23 @@ function generatePerson(options = {}) {
     };
 
     const personalities = ["Shy", "Outgoing", "Funny", "Serious", "Creative", "Athletic", "Nerdy", "Dramatic"];
+    const interests = [
+        "Video Games", "Sports", "Art", "Music", 
+        "Reading", "Cooking", "Travel", "Science",
+        "Photography", "Dancing", "Writing", "Fashion",
+        "Technology", "Nature", "Movies", "Theater"
+    ];
+
+    // Ensure person has at least one random interest if none provided
+    const personInterests = options.interests || [interests[randomInt(0, interests.length - 1)]];
+
     let person = {
         id: generateUniqueId(),
         name: generateRandomName(),
         age: options.age !== undefined ? options.age : randomInt(5, 25),
         gender: options.gender || (Math.random() < 0.5 ? "Male" : "Female"),
         personality: options.personality || personalities[randomInt(0, personalities.length - 1)],
-        interests: options.interests || [ "Video Games", "Sports", "Art", "Music", "Reading", "Cooking", "Travel", "Science" ][randomInt(0, 7)],
+        interests: personInterests,
         stats: options.stats || baseStats,
         traits: options.traits ? [...options.traits] : [],
         
